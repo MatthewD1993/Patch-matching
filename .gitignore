@@ -10,7 +10,7 @@ gen
 log/
 *.pyc
 *.pyo
-data/
+*.npy
 .ipynb_checkpoints/
 KITTIX_n56deep.7z
 src/build/
