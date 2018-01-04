@@ -5,7 +5,7 @@
 #include <opencv2/core/core.hpp>
 #include <opencv2/highgui/highgui.hpp>
 #include <zlib.h>
-#include <opencv2/imgproc.hpp>
+#include <opencv2/imgproc/imgproc.hpp>
 #include <opencv/cv.h>
 
 // #include <string>
@@ -33,11 +33,11 @@ protected:
     std::string _sequence1, _sequence2;
 
 public:
-  
+
     int offset;
     FileSequence():offset(0)
     {
-	
+
     }
 
     FileSequence ( std::string sequence ):offset(0)

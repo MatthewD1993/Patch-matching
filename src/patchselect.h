@@ -239,7 +239,7 @@ public:
             cv::Point2i pos2p = getgtPos2p ( pos1 );
 
 //            if ( addPositive && ( pos2p.x < 0 || pos2p.y < 0 || pos2p.x >= _gt[pos1.im].cols || pos2p.y >= _gt[pos1.im].rows /*||  _occ[pos1.seq][pos1.im] ( pos1.y,pos1.x )*/ ) )
-            if ( addPositive && ( pos2p.x < 0 || pos2p.y < 0 || pos2p.x >= _gt[pos1.im].cols || pos2p.y >= _gt[pos1.im].rows ||  _occ[pos1.seq][pos1.im] ( pos1.y,pos1.x ) ) )
+            if ( addPositive && ( pos2p.x < 0 || pos2p.y < 0 || pos2p.x >= _gt[pos1.im].cols || pos2p.y >= _gt[pos1.im].rows)) //||  _occ[pos1.seq][pos1.im] ( pos1.y,pos1.x ) ) )
             {
                 i--;
                 continue;

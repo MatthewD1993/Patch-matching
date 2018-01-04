@@ -119,7 +119,7 @@ def main():
                         test_acc.update(accuracy(pred, l))
                         test_confuse_rate.update(get_confuse_rate(pred))
                     test_logger.log_scalar("test_acc", test_acc.avg, step)
-                    test_logger.log_scalar("test_confuse_rate", test_confuse_rate, step)
+                    test_logger.log_scalar("test_confuse_rate", test_confuse_rate.avg, step)
                     test_acc.reset()
 
                     # if i % 500 == 0:
