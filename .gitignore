@@ -1,0 +1,21 @@
+# Created by .ignore support plugin (hsz.mobi)
+### Example user template template
+### Example user template
+
+# IntelliJ project files
+*.iml
+out
+gen
+.idea/
+log/
+*.pyc
+*.pyo
+data/
+.ipynb_checkpoints/
+KITTIX_n56deep.7z
+src/build/
+src/sintelGlobals.h~
+src/test_module.py
+src/todo
+helper/flowlib.py.bak
+helper/flow_transforms.py.bak
