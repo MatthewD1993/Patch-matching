@@ -11,6 +11,7 @@ log/
 *.pyc
 *.pyo
 *.npy
+*.so
 .ipynb_checkpoints/
 KITTIX_n56deep.7z
 src/build/

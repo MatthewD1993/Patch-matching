@@ -1,5 +1,5 @@
 #!/bin/bash
 rm -rf build/
-python setup.py build
-python setup.py install
+python3.6 setup.py build
+#python3.6 setup.py install
 

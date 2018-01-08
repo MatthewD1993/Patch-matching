@@ -17,6 +17,13 @@ def to_np(x):
     return x.data.cpu().numpy()
 
 
+def get_range(x):
+    if isinstance(x, Variable):
+        x = x.data
+    x = x.cpu().numpy()
+    return np.min(x), np.max(x)
+
+
 def to_var(x):
     if torch.cuda.is_available():
         x = x.cuda()
@@ -29,7 +36,7 @@ def to_RGB(x):
     return x_converted
 
 # torch.set_printoptions(precision=6)
-gpus = [0, 1]
+gpus = [0, 1, 2, 3]
 os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
 os.environ['CUDA_VISIBLE_DEVICES'] = ','.join([str(g) for g in gpus])
 
@@ -39,32 +46,34 @@ def main():
     features = 64
     out_features = features * 4
     image_channels = 3
-    epochs = 10
+    epochs = 500000
 
     # TODO Big control.
     # Random guss correct ratio
     # correct_ratio = 0.5
     # while correct_ratio < 0.8:  # Keep training
 
-    judge = Judge(image_channels, out_features)
+    judge = Judge(image_channels, out_features, two_set_vars=True)
+    # judge._initialize_weights()
     judge = DataParallel(judge.cuda(gpus[0]), device_ids=gpus)
 
     train_logger = Logger("./log/train/")
     test_logger = Logger("./log/test/")
-    optimizer = optim.Adam(judge.parameters(), lr=0.001)
+    optimizer = optim.Adam(judge.parameters(), lr=0.0001)
 
     patch_set = KITTIPatchesDataset(patchsize)
     patch_set.newData()
-    train_loader = DataLoader(patch_set, batch_size=32, num_workers=4, pin_memory=True)
+    train_loader = DataLoader(patch_set, batch_size=128, num_workers=4, pin_memory=True, drop_last=True)
 
     test_patch_set = KITTIPatchesDataset()
     test_patch_set.load_data("./data/test_patches.npy")
-    test_loader = DataLoader(test_patch_set, batch_size=16, num_workers=4, pin_memory=True)
+    test_loader = DataLoader(test_patch_set, batch_size=128, num_workers=4, pin_memory=True, drop_last=True)
 
     margin = 1.
     threshold = 0.3
 
     for e in range(epochs):
+        patch_set.newData()
         for i, (pairs_d, labels_d) in enumerate(train_loader):
             step = e * len(train_loader) + i
 
@@ -75,14 +84,8 @@ def main():
             preds = judge(pairs)
 
             loss = new_hinge_loss(preds, labels)
-            print("loss is", loss)
 
             # final_loss = torch.mean(loss)
-
-            train_acc = accuracy(preds, labels, margin, threshold)
-            train_confuse_rate = get_confuse_rate(preds)
-            train_logger.log_scalar("accuracy", train_acc, step)
-            train_logger.log_scalar("confuse_rate", train_confuse_rate, step)
 
             optimizer.zero_grad()
             loss.backward()
@@ -90,7 +93,15 @@ def main():
             test_acc = AverageMeter()
             test_confuse_rate = AverageMeter()
 
-            if step % 50 == 0:
+            if step % 200 == 0:
+                train_acc = accuracy(preds, labels, margin, threshold)
+                train_confuse_rate = get_confuse_rate(preds)
+                train_logger.log_scalar("accuracy", train_acc, step)
+                train_logger.log_scalar("confuse_rate", train_confuse_rate, step)
+                train_logger.log_histogram("preds", to_np(preds), step)
+
+                print("Step %d \tloss is %f" % (step, to_np(loss)))
+                print("Preds range: ", get_range(preds))
 
                 for tag, value in judge.named_parameters():
                     tag = tag.replace('.', '/')
@@ -108,9 +119,9 @@ def main():
                 #     train_logger.log_images("neg", [to_RGB(pairs_d[idx][0]), to_RGB(pairs_d[idx][1])], step)
                 #     # train_logger.log_images("neg_1", to_RGB(pairs_d[idx][1]), step)
 
-                if step % 100 == 0:
+                if step % 400 == 0:
                     train_logger.log_scalar("loss", to_np(loss), step)
-                    print("Iteration {} loss: {}".format(i, to_np(loss)))
+                    # print("Iteration {} loss: {}".format(step, to_np(loss)))
 
                     for p, l in test_loader:
                         p = Variable(p.cuda(0,), requires_grad=False)
@@ -128,8 +139,8 @@ def main():
                     #     # Log test accuracy
                     #     test_acc =  accuracy()
 
-                    if i % 1000 == 0:
-                        torch.save(judge.state_dict(), "./log/check_"+str(i))
+                    if step % 5000 == 0:
+                        torch.save(judge.state_dict(), "./log/check_"+str(step))
 
 
 class AverageMeter(object):

@@ -10,35 +10,36 @@ patch_size = 56
 num_sample_pairs = 10000
 
 test_patch_set = KITTIPatchesDataset(patchsize=patch_size)
-test_patch_set.newData(num_sample_pairs=num_sample_pairs)
-test_patch_set.save_data("./data/test_patches")
+for i in range(100):
+    test_patch_set.newData(num_sample_pairs=num_sample_pairs)
+    test_patch_set.save_data("./data/test_patches")
 
-s_data = test_patch_set.data.permute(0, 1, 3, 4, 2)
-data = s_data.contiguous().view(num_sample_pairs, 2, 2, patch_size, patch_size, 3).numpy()
-
-print("Check dataset...")
-rand_pairs = np.random.choice(num_sample_pairs, 50)
-# plt.ion()
-# f = plt.figure("compare")
-# f.suptitle("Compare")
+# s_data = test_patch_set.data.permute(0, 1, 3, 4, 2)
+# data = s_data.contiguous().view(num_sample_pairs, 2, 2, patch_size, patch_size, 3).numpy()
 #
-for i in rand_pairs:
-    print("Show image pairs ", i)
-    pos_0 = cv2.cvtColor(data[i][0][0], cv2.COLOR_LAB2BGR)
-    pos_1 = cv2.cvtColor(data[i][0][1], cv2.COLOR_LAB2BGR)
-    neg_0 = cv2.cvtColor(data[i][1][0], cv2.COLOR_LAB2BGR)
-    neg_1 = cv2.cvtColor(data[i][1][1], cv2.COLOR_LAB2BGR)
-
-    cv2.imshow("pos_0", pos_0)
-    cv2.imshow("pos_1", pos_1)
-    cv2.imshow("neg_0", neg_0)
-    cv2.imshow("neg_1", neg_1)
-
-    cv2.moveWindow("pos_0", 100, 100)
-    cv2.moveWindow("pos_1", 500, 100)
-    cv2.moveWindow("neg_0", 100, 500)
-    cv2.moveWindow("neg_1", 500, 500)
-    cv2.waitKey(0)
+# print("Check dataset...")
+# rand_pairs = np.random.choice(num_sample_pairs, 50)
+# # plt.ion()
+# # f = plt.figure("compare")
+# # f.suptitle("Compare")
+# #
+# for i in rand_pairs:
+#     print("Show image pairs ", i)
+#     pos_0 = cv2.cvtColor(data[i][0][0], cv2.COLOR_LAB2BGR)
+#     pos_1 = cv2.cvtColor(data[i][0][1], cv2.COLOR_LAB2BGR)
+#     neg_0 = cv2.cvtColor(data[i][1][0], cv2.COLOR_LAB2BGR)
+#     neg_1 = cv2.cvtColor(data[i][1][1], cv2.COLOR_LAB2BGR)
+#
+#     cv2.imshow("pos_0", pos_0)
+#     cv2.imshow("pos_1", pos_1)
+#     cv2.imshow("neg_0", neg_0)
+#     cv2.imshow("neg_1", neg_1)
+#
+#     cv2.moveWindow("pos_0", 100, 100)
+#     cv2.moveWindow("pos_1", 500, 100)
+#     cv2.moveWindow("neg_0", 100, 500)
+#     cv2.moveWindow("neg_1", 500, 500)
+#     cv2.waitKey(0)
 
     # ax1 = f.add_subplot(221)
     # ax1.imshow(pos_0)

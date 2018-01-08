@@ -85,15 +85,18 @@ class HingeEmbeddingLoss(Function):
         buffer.add_(-t)
         buffer[torch.lt(buffer, 0)] = 0
         output = buffer.sum()
+        # print('pos', output)
 
         buffer.fill_(ctx.margin + ctx.t).add_(-1, input)
-        buffer.clamp(min=0)
+        buffer.clamp_(min=0)
+        # print('buffer', buffer)
         buffer[torch.eq(target, 1)] = 0
         output += buffer.sum()
+        # print('neg', output)
 
         if ctx.size_average:
             output = output / input.nelement()
-        print("forward", output)
+        # print("forward", output)
         ctx.save_for_backward(input, target)
         return input.new((output, ))
 
@@ -102,14 +105,16 @@ class HingeEmbeddingLoss(Function):
     def backward(ctx, grad_output):
         # print("grad_output", grad_output)
         input, target = ctx.saved_tensors
+        # print('input shape', input.shape)
         grad_input = input.new().resize_as_(input).copy_(target)
         grad_input[torch.mul(torch.eq(target, -1), torch.gt(input, ctx.margin+ctx.t))] = 0
         grad_input[torch.mul(torch.eq(target, 1), torch.lt(input, ctx.t))] = 0
 
         if ctx.size_average:
-            grad_input.mul_(1./input.nelement())
+            grad_input.mul_(1. / input.nelement())
 
-        grad_input.mul_(grad_output[0])
+        if grad_output[0] != 1:
+            grad_input.mul_(grad_output[0])
 
         return grad_input, None, None, None, None
 

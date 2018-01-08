@@ -161,15 +161,15 @@ public:
             for ( int k =0; k<2; k++ )
             {
                 imgtype x =  k ? _seq0(i) : _seq1(i);
-                cout<< "size of each element is " <<sizeof(x(0,0))<<endl;
-;
+//                cout<< "size of each element is " <<sizeof(x(0,0))<<endl;
+
 
                 for ( int p=0; p<channels; p++ )
                 {
                         float m_min=10000, m_max=-10000;
                         for ( int k =0; k<x.rows; k++ )
                         for ( int l =0; l<x.cols; l++ ){m_min=min(x(k,l)[p], m_min); m_max=max(x(k,l)[p], m_min);};
-                        cout<<"Image "<<i<< " channel " << p<< " Range " << m_min<<" "<<m_max<<endl;
+//                        cout<<"Image "<<i<< " channel " << p<< " Range " << m_min<<" "<<m_max<<endl;
 
 
 //                    double mean = 0;

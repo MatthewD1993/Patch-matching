@@ -149,7 +149,7 @@ class ImageSequence : public FileSequence<t>
 
         if ( _lab &&  t().channels() !=1 )
         {
-        cout <<" I guess here. " <<endl;
+//        cout <<" I guess here. " <<endl;
             // assert(0);
             assert ( t().channels() ==3 );
 //            Mat obj_t = cv::imread(filename, 1)
@@ -158,7 +158,7 @@ class ImageSequence : public FileSequence<t>
 
             obj =  cv::imread ( filename,1 );
             if ( obj.empty() ) return false;
-            if ( obj.depth() == CV_32F ) {cout<<"image is CV_32F"<<endl; obj/=255.f;}
+            if ( obj.depth() == CV_32F ) {obj/=255.f;}
             cv::cvtColor ( obj,obj, CV_BGR2Lab ); //Chengbiao: change RGB to BGR
             return ( !obj.empty() );
         }
