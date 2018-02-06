@@ -137,7 +137,7 @@ public:
         _psreal = patchsize;
         // for ( int i =1; i< scales; i++ ) _psreal*=2;
         //  _psreal*= scale;
-        cout << "Size real:" << _psreal << endl;
+//        cout << "Size real:" << _psreal << endl;
 
         // scaleCut[0]=0;
         // for ( int i = 1, s = _psreal/4;  i< scales ; i++, s/=2 ) scaleCut[i]= scaleCut[i-1] + s;
