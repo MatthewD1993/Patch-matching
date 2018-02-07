@@ -6,11 +6,13 @@ from torch.utils.data import Dataset
 import numpy as np
 # import cv2
 
+print('Patch selecet:', ps.__file__)
 
 class KITTIPatchesDataset(Dataset):
     img1 = "/cdengdata/data_scene_flow/training/image_2/%6_10.png"
     img2 = "/cdengdata/data_scene_flow/training/image_2/%6_11.png"
     flow = "/cdengdata/data_scene_flow/training/flow_noc/%6_10.png"
+    one_fetch = 16384
     # cntImages = 200
 
     def __init__(self, patchsize=None, scale=1, offset=0, cntImages=200):
@@ -20,7 +22,7 @@ class KITTIPatchesDataset(Dataset):
         self.data = None
         # self.newData(self.patch_selector, 10000)
 
-    def newData(self, num_sample_pairs=10000):
+    def newData(self, num_sample_pairs=one_fetch):
         # 10000*2*2*patchsize*patchsiz*3 float numbers, about 1.47GB
         data = ps.newData(self.patch_selector, num_sample_pairs)
 

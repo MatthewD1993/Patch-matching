@@ -305,8 +305,6 @@ public:
     			        pt[2] = (float) x (j,k) [2];
     			        pt += 3;
     			    }
-
-
     			}
 
 //    			std::memcpy(pt,(float *)x.data, patch_s_m);
@@ -319,9 +317,7 @@ public:
     		else arr = &_pos;
     	}
     	assert(pt == ptr + (patch_s*2*2*arr->size()));
-
     }
-
 };
 
 
