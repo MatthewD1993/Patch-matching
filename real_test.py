@@ -3,7 +3,7 @@ import torch.nn.functional as F
 import torch
 from torch.autograd import Variable, gradcheck
 #
-from network.net_paper import Judge
+from network.models import Judge
 
 # =================================
 import matplotlib.pyplot as plt

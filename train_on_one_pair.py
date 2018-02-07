@@ -1,4 +1,4 @@
-from network.net_paper import Judge
+from network.models import Judge
 from network.utils import accuracy, get_confuse_rate # , new_hinge_loss
 from network.utils import KITTIPatchesDataset
 from network.logger import Logger

@@ -1,4 +1,4 @@
-from network.net_paper import Judge
+from network.models import Judge
 from network.utils import new_hinge_loss, accuracy, get_confuse_rate
 from network.utils import KITTIPatchesDataset
 from network.logger import Logger
@@ -11,14 +11,15 @@ import torch.optim as optim
 import os
 import numpy as np
 import cv2
-import tqdm
 
 
 # torch.set_printoptions(precision=6)
 gpus = [3]
 os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
 os.environ['CUDA_VISIBLE_DEVICES'] = ','.join([str(g) for g in gpus])
-patch_format = 'RGB'
+
+# Set to False if patch format is Lab.
+patch_is_BGR = True
 
 
 def to_np(x):
@@ -39,8 +40,12 @@ def to_var(x):
 
 
 def to_RGB(x):
+    # Color channel move to the last dim.
     x = x.permute(1, 2, 0).numpy()
-    x_converted = cv2.cvtColor(x, cv2.COLOR_LAB2RGB)
+    if not patch_is_BGR:
+        x_converted = cv2.cvtColor(x, cv2.COLOR_LAB2RGB)
+    else:
+        x_converted = x[:, :, [2, 0, 1]]
     return x_converted
 
 
@@ -54,10 +59,11 @@ def main():
 
     judge = Judge(image_channels, out_features, two_set_vars=two_set_vars)
 
-    # # Use multiple GPUs
-    # judge = DataParallel(judge.cuda(gpus[0]), device_ids=gpus)
-
-    judge = judge.cuda()
+    # Use multiple GPUs
+    if len(gpus) > 1:
+        judge = DataParallel(judge.cuda(gpus[0]), device_ids=gpus)
+    else:
+        judge = judge.cuda()
 
     train_logger = Logger(log_dir=log_dir + "train")
     test_logger = Logger(log_dir=log_dir + "test")
@@ -132,7 +138,7 @@ def main():
                     test_logger.log_scalar("test_confuse_rate", test_confuse_rate.avg, step)
                     test_acc.reset()
 
-                    if step % 20000 == 0:
+                    if (step+1) % 10000 == 0:
                         torch.save(judge.state_dict(), log_dir+"check_"+str(step))
 
 

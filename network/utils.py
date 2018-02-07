@@ -8,24 +8,23 @@ import numpy as np
 
 print('Patch selecet:', ps.__file__)
 
+
 class KITTIPatchesDataset(Dataset):
     img1 = "/cdengdata/data_scene_flow/training/image_2/%6_10.png"
     img2 = "/cdengdata/data_scene_flow/training/image_2/%6_11.png"
     flow = "/cdengdata/data_scene_flow/training/flow_noc/%6_10.png"
     one_fetch = 16384
-    # cntImages = 200
 
-    def __init__(self, patchsize=None, scale=1, offset=0, cntImages=200):
-        if patchsize is not None:
-            self.patch_selector = ps.init(self.img1, self.img2, self.flow, cntImages, patchsize, scale, offset)
-            self.patch_size = patchsize
+    def __init__(self, patchsize, scale=1, offset=0, cntImages=200):
+
+        self.patch_selector = ps.init(self.img1, self.img2, self.flow, cntImages, patchsize, scale, offset)
+        self.patch_size = patchsize
         self.data = None
         # self.newData(self.patch_selector, 10000)
 
     def newData(self, num_sample_pairs=one_fetch):
         # 10000*2*2*patchsize*patchsiz*3 float numbers, about 1.47GB
         data = ps.newData(self.patch_selector, num_sample_pairs)
-
         self.data = torch.FloatTensor(data).view(num_sample_pairs*2, 2, self.patch_size, self.patch_size, -1)
         self.data = self.data.permute(0, 1, 4, 2, 3)
 
@@ -33,7 +32,6 @@ class KITTIPatchesDataset(Dataset):
         return self.data.shape[0]
 
     def __getitem__(self, index):
-        # return self.data[index]
         return self.data[index], torch.FloatTensor([(index & 1)*(-2.) + 1.])
 
     def save_data(self, path):
@@ -44,30 +42,35 @@ class KITTIPatchesDataset(Dataset):
         self.data = torch.FloatTensor(np.load(path))
 
 
-# def new_hinge_loss(pred, label, t, margin):
-#     """
-#     label 1 means match, 0 means not match.
-#     :param pred:
-#     :param label:
-#     :param t:
-#     :param margin:
-#     :return:
-#     """
-#     # t = torch.FloatTensor([t]).cuda()
-#     if torch.eq(label, 1).any():
-#         # t1 = pred.sub(t)
-#         loss = torch.clamp(pred-t, min=0)
-#     else:
-#         # t2 = margin.add(t).sub(pred)
-#         loss = torch.clamp(margin+t-pred, min=0)
-#
-#     return loss
+class KITTI_3_Dataset(Dataset):
+    img1 = "/cdengdata/data_scene_flow/training/image_2/%6_10.png"
+    img2 = "/cdengdata/data_scene_flow/training/image_2/%6_11.png"
+    flow = "/cdengdata/data_scene_flow/training/flow_noc/%6_10.png"
+    one_fetch = 16384
+
+    def __init__(self, patchsize, offset=0, cntImages=200):
+        self.patch_selector = ps.init(self.img1, self.img2, self.flow, cntImages, patchsize, scale, offset)
+        self.patch_size = patchsize
+        self.data = None
+
+    def newData(self, num_samples=one_fetch):
+        data = ps.newData(self.patch_selector, num_samples)
+        self.data = torch.FloatTensor(data).view(num_samples, 4, self.patch_size, self.patch_size, -1)
+        # Dim 2: 0 ref; 1 pos; 2 ref; 3 neg
+        self.data = self.data[:, [0,1,3], :, :, :]
+        self.data = self.data.permute(0, 1, 4, 2, 3)
+
+    def __len__(self):
+        return self.data.shape[0]
+
+    def __getitem__(self, index):
+        return self.data[index]
+
 
 def new_hinge_loss(input, target, margin=1.0, t=0.3, size_average=True):
     return HingeEmbeddingLoss.apply(input, target, margin, t, size_average)
 
 
-# TODO: Make new hinge loss
 class HingeEmbeddingLoss(Function):
 
     # def __init__(self, margin=1, t=0.3, size_average=True):
