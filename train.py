@@ -13,6 +13,9 @@ import numpy as np
 import cv2
 
 
+os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
+os.environ['CUDA_VISIBLE_DEVICES'] = '3'
+
 def to_np(x):
     return x.data.cpu().numpy()
 
@@ -42,6 +45,8 @@ os.environ['CUDA_VISIBLE_DEVICES'] = ','.join([str(g) for g in gpus])
 
 
 def main():
+    log_dir = "./log_1set_vars/"
+    two_set_vars = False
     patchsize = 56
     features = 64
     out_features = features * 4
@@ -53,12 +58,12 @@ def main():
     # correct_ratio = 0.5
     # while correct_ratio < 0.8:  # Keep training
 
-    judge = Judge(image_channels, out_features, two_set_vars=True)
+    judge = Judge(image_channels, out_features, two_set_vars=two_set_vars)
     # judge._initialize_weights()
     judge = DataParallel(judge.cuda(gpus[0]), device_ids=gpus)
 
-    train_logger = Logger("./log/train/")
-    test_logger = Logger("./log/test/")
+    train_logger = Logger(log_dir=log_dir + "train")
+    test_logger = Logger(log_dir=log_dir + "test")
     optimizer = optim.Adam(judge.parameters(), lr=0.0001)
 
     patch_set = KITTIPatchesDataset(patchsize)
@@ -93,7 +98,7 @@ def main():
             test_acc = AverageMeter()
             test_confuse_rate = AverageMeter()
 
-            if step % 200 == 0:
+            if step % 40 == 0:
                 train_acc = accuracy(preds, labels, margin, threshold)
                 train_confuse_rate = get_confuse_rate(preds)
                 train_logger.log_scalar("accuracy", train_acc, step)
@@ -119,7 +124,7 @@ def main():
                 #     train_logger.log_images("neg", [to_RGB(pairs_d[idx][0]), to_RGB(pairs_d[idx][1])], step)
                 #     # train_logger.log_images("neg_1", to_RGB(pairs_d[idx][1]), step)
 
-                if step % 400 == 0:
+                if step % 100 == 0:
                     train_logger.log_scalar("loss", to_np(loss), step)
                     # print("Iteration {} loss: {}".format(step, to_np(loss)))
 
@@ -139,8 +144,8 @@ def main():
                     #     # Log test accuracy
                     #     test_acc =  accuracy()
 
-                    if step % 5000 == 0:
-                        torch.save(judge.state_dict(), "./log/check_"+str(step))
+                    if step % 20000 == 0:
+                        torch.save(judge.state_dict(), log_dir+"check_"+str(step))
 
 
 class AverageMeter(object):

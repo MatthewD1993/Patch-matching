@@ -4,7 +4,6 @@
 #include <opencv/cv.h>
 #include <opencv2/core/core.hpp>
 using namespace cv;
-//#define _Multiscale
 
 class patchselect
 {
@@ -18,7 +17,6 @@ public:
     class selectorMain
     {
     public:
-
         patchselect * ps;
         struct smPos
         {
@@ -38,7 +36,6 @@ public:
     class selectorSec
     {
     public:
-
         int cols,rows;
         int minDistq;
         struct ssPos
@@ -46,9 +43,7 @@ public:
             float x,y;
         };
 
-        selectorSec ( int mindDist = 10 ) :minDistq ( mindDist*mindDist )
-        {
-        }
+        selectorSec ( int mindDist = 10 ) :minDistq ( mindDist*mindDist ) {}
 
         virtual ssPos get ( const cv::Point2i & p, int scale )
         {
@@ -59,7 +54,6 @@ public:
                 ret.y = randomIVal ( rows );
             }
             while ( ( ret.x-p.x ) * ( ret.x-p.x ) + ( ret.y-p.y ) * ( ret.y-p.y ) < minDistq*scale*scale );
-
             return ret;
         }
     };
@@ -67,14 +61,10 @@ public:
     class selectorClose : public selectorSec
     {
     public:
-
         int maxDistQ;
         int maxDist;
 
-        selectorClose ( int mindDist = 10,int maxDist = 100 ) :selectorSec ( mindDist ), maxDist ( maxDist ), maxDistQ ( maxDist*maxDist )
-        {
-
-        }
+        selectorClose ( int mindDist = 10,int maxDist = 100 ) :selectorSec(mindDist), maxDist(maxDist), maxDistQ(maxDist*maxDist){}
 
         ssPos get ( const cv::Point2i & p, int scale )
         {
@@ -83,10 +73,8 @@ public:
             {
                 ret.x = randomIVal ( maxDist*scale*2+1 )- ( maxDist*scale ) + p.x;
                 ret.y = randomIVal ( maxDist*scale*2+1 )- ( maxDist*scale ) +  p.y;
-
             }
             while ( ( ret.x-p.x ) * ( ret.x-p.x ) + ( ret.y-p.y ) * ( ret.y-p.y ) < minDistq*scale*scale || ret.x <0 || ret.y < 0 || ret.x >= cols || ret.y >= rows );
-
             return ret;
         }
     };
@@ -99,7 +87,7 @@ public:
 
     ImageSequence< imgtype >  _seq0;
     ImageSequence< imgtype >  _seq1;
-    //std::vector < ImageSequence<cv::Mat1b> > _occ;
+//    std::vector < ImageSequence<cv::Mat1b> > _occ;
 
     FlowSequence  _gt;
 
@@ -116,7 +104,6 @@ public:
 	// Add two class variable. sml, ssl
 	std::vector<patchselect::selectorMain*>  sml;
 	std::vector<patchselect::selectorSec*>  ssl;
-
 
 
 
@@ -152,9 +139,8 @@ public:
         _gt._loadType = _gt.LOAD_TYPE_KITTI;
         _gt.setFileSequence ( flow );
 
-
-
-        for ( int i =0; i< _cntImages; i++ )
+        // Load and preprocess seqs.
+        for ( int i=0; i< _cntImages; i++ )
         {
             _gt ( i );
             //normalize Patches:
@@ -162,41 +148,34 @@ public:
             {
                 imgtype x =  k ? _seq0(i) : _seq1(i);
 //                cout<< "size of each element is " <<sizeof(x(0,0))<<endl;
-
-
                 for ( int p=0; p<channels; p++ )
                 {
-                        float m_min=10000, m_max=-10000;
-                        for ( int k =0; k<x.rows; k++ )
-                        for ( int l =0; l<x.cols; l++ ){m_min=min(x(k,l)[p], m_min); m_max=max(x(k,l)[p], m_min);};
+//                        float m_min=10000, m_max=-10000;
+//                        for ( int k =0; k<x.rows; k++ )
+//                        for ( int l =0; l<x.cols; l++ ){m_min=min(x(k,l)[p], m_min); m_max=max(x(k,l)[p], m_min);};
 //                        cout<<"Image "<<i<< " channel " << p<< " Range " << m_min<<" "<<m_max<<endl;
+                    double mean = 0;
+                    double stdev= 0;
 
+                    for ( int k =0; k<x.rows; k++ )
+                        for ( int l =0; l<x.cols; l++ ){
+                            stdev += x(k,l)[p] * x(k,l)[p];
+                            mean  += x(k,l)[p];
+                            }
 
-//                    double mean = 0;
-//                    for ( int k =0; k<x.rows; k++ )
-//                        for ( int l =0; l<x.cols; l++ ) mean += x ( k,l ) [p];
-//
-//                    mean/= ( float ) ( x.rows*x.cols );
-//
-//                    for ( int k =0; k<x.rows; k++ )
-//                        for ( int l =0; l<x.cols; l++ ) x ( k,l ) [p]-= mean;
-//
-//                    double stdev= 0;
-//                    for ( int k =0; k<x.rows; k++ )
-//                        for ( int l =0; l<x.cols; l++ )   stdev += x ( k,l ) [p]*x ( k,l ) [p];
-//
-//                    // Actually inverse of std variance.
-//                    stdev= 1.f/sqrt ( stdev/ ( float ) ( x.rows*x.cols ) );
-//
-//                    for ( int k =0; k<x.rows; k++ )
-//                        for ( int l =0; l<x.cols; l++ )
-//                        {
-//                            x ( k,l ) [p]*= stdev;
-//                            assert ( !isnan ( x ( k,l ) [p] ) );
-//                        }
+                    mean/= ( float ) ( x.rows*x.cols );
+                    // Actually inverse of std variance.
+                    stdev= 1.f/sqrt ( stdev/ ( float ) ( x.rows*x.cols ) );
+
+                    for ( int k =0; k<x.rows; k++ )
+                        for ( int l =0; l<x.cols; l++ ){
+                        x ( k,l )[p] -= mean;
+                        x ( k,l )[p] *= stdev;
+                        assert ( !isnan ( x ( k,l ) [p] ) );
+                        }
+
                 }
             }
-            // cout<<"Image normalized!"<<endl;
             cv::copyMakeBorder ( _seq0[i], _seq0[i],_psreal/2, ( _psreal-1 ) /2,_psreal/2, ( _psreal-1 ) /2,cv::BORDER_REPLICATE );
             cv::copyMakeBorder ( _seq1[i], _seq1[i],_psreal/2, ( _psreal-1 ) /2,_psreal/2, ( _psreal-1 ) /2,cv::BORDER_REPLICATE );
 
@@ -209,7 +188,7 @@ public:
 
         res.x = pos.x + _gt ( pos.im ) ( pos.y,pos.x ) [0]+0.5f; //randomVal(2.f)-0.5f;//+0.5f;
         res.y = pos.y + _gt ( pos.im ) ( pos.y,pos.x ) [1]+0.5f; //randomVal(2.f)-0.5f;//+0.5f;
-        if ( _gt[pos.im] ( pos.y,pos.x ) [0] > 1000000.f ) res.x =  res.y = -1000;
+        if ( _gt[pos.im] ( pos.y,pos.x ) [0] > 1000000.f ) res.x = res.y = -1000;
         return res;
     }
 
@@ -238,8 +217,8 @@ public:
             auto pos1 = sml[ randomIVal(sml.size()) ]->get();
             cv::Point2i pos2p = getgtPos2p ( pos1 );
 
-//            if ( addPositive && ( pos2p.x < 0 || pos2p.y < 0 || pos2p.x >= _gt[pos1.im].cols || pos2p.y >= _gt[pos1.im].rows /*||  _occ[pos1.seq][pos1.im] ( pos1.y,pos1.x )*/ ) )
-            if ( addPositive && ( pos2p.x < 0 || pos2p.y < 0 || pos2p.x >= _gt[pos1.im].cols || pos2p.y >= _gt[pos1.im].rows)) //||  _occ[pos1.seq][pos1.im] ( pos1.y,pos1.x ) ) )
+            if ( addPositive && ( pos2p.x<0 || pos2p.y<0 || pos2p.x >= _gt[pos1.im].cols || pos2p.y >= _gt[pos1.im].rows))
+                // || _occ[pos1.seq][pos1.im](pos1.y, pos1.x)
             {
                 i--;
                 continue;
@@ -258,7 +237,7 @@ public:
             if ( addPositive )
             {
 //                sampletype  p1;
-                p1.first = {0,pos1.im,pos1.x, pos1.y,pos2p.x,pos2p.y};
+                p1.first = {0, pos1.im, pos1.x, pos1.y, pos2p.x, pos2p.y};
                 p1.second[0] = ref;
                 // p1.second[0] = _seq0[pos1.im] ( cv::Rect ( pos1.x,pos1.y,_psreal,_psreal ) );
                 p1.second[1] = _seq1[pos1.im] ( cv::Rect ( pos2p.x,pos2p.y,_psreal,_psreal ) );
@@ -284,14 +263,13 @@ public:
                 ssl[choosen]->cols = _gt[pos1.im].cols;
                 ssl[choosen]->rows = _gt[pos1.im].rows;
                 
-                auto pos2n = ssl[choosen]->get ( pos2p, _scale );
+                auto pos2n = ssl[choosen]-> get( pos2p, _scale );
 
 //                sampletype  n1;
                 float disttopos = sqrtf ( ( pos2n.x - pos2p.x ) * ( pos2n.x - pos2p.x ) + ( pos2n.y - pos2p.y ) * ( pos2n.y - pos2p.y ) );
-                n1.first = {disttopos,pos1.im,pos1.x, pos1.y,pos2n.x,pos2n.y};
+                n1.first = {disttopos, pos1.im, pos1.x, pos1.y, pos2n.x, pos2n.y};
                 n1.second[0] = ref;
-                n1.second[1] = _seq1[pos1.im] ( cv::Rect ( pos2n.x,pos2n.y,_psreal,_psreal ) );
-                
+                n1.second[1] = _seq1[pos1.im] ( cv::Rect( pos2n.x, pos2n.y, _psreal, _psreal) );
         
                 _neg.push_back ( n1 );
                 assert ( pos1.x >=0 || pos1.y >= 0 && pos2n.x >= 0 && pos2n.y >=0 && ( pos2n.x-pos1.x- _gt[pos1.im] ( pos1.y,pos1.x ) [0] ) >2.1f );
@@ -342,30 +320,6 @@ public:
     	assert(pt == ptr + (patch_s*2*2*arr->size()));
 
     }
-
-
-
-
-//        void createPyArrayPtr_test ( float * ptr ) {
-//        float* pt = ptr;
-//        imgtype data = _pos[0].second[0];
-//        for(int i=0;i<200;i++){
-//            for(int j=0; j<200; j++){
-//                for(int c=0; c<3; c++){
-//                *pt = (float)data(i,j)[c];
-////                data+=1;
-//                pt+=1;
-//
-//                }
-//
-//            }
-//        }
-
-
-
-
-//    }
-
 
 };
 

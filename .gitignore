@@ -20,3 +20,8 @@ src/test_module.py
 src/todo
 helper/flowlib.py.bak
 helper/flow_transforms.py.bak
+data/
+helper/__pycache__/
+log_t/
+network/__pycache__/
+patchselect.cpython-36m-x86_64-linux-gnu.so

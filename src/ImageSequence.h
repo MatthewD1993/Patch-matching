@@ -8,8 +8,8 @@
 #include <opencv2/imgproc/imgproc.hpp>
 #include <opencv/cv.h>
 
-// #include <string>
-// #include <iostream>
+//#include <string>
+//#include <iostream>
 
 #define SAVE_FILESEQUENCE_FAST_OPERATOR
 
@@ -35,10 +35,8 @@ protected:
 public:
 
     int offset;
-    FileSequence():offset(0)
-    {
+    FileSequence():offset(0) {}
 
-    }
 
     FileSequence ( std::string sequence ):offset(0)
     {
@@ -146,15 +144,9 @@ class ImageSequence : public FileSequence<t>
 
     bool loadFile ( std::string filename, t & obj )
     {
-
         if ( _lab &&  t().channels() !=1 )
         {
-//        cout <<" I guess here. " <<endl;
-            // assert(0);
-            assert ( t().channels() ==3 );
-//            Mat obj_t = cv::imread(filename, 1)
-//            if (obj_t.empty() ) return false;
-//            if (obj.depth() == CV_32F){obj_t.convertTo(obj, CV_32F); }
+            assert ( t().channels() == 3 );
 
             obj =  cv::imread ( filename,1 );
             if ( obj.empty() ) return false;
@@ -162,18 +154,14 @@ class ImageSequence : public FileSequence<t>
             cv::cvtColor ( obj,obj, CV_BGR2Lab ); //Chengbiao: change RGB to BGR
             return ( !obj.empty() );
         }
-
-
         if ( t().channels() ==1 ) obj =  cv::imread ( filename,0 );
-        else obj = cv::imread ( filename,1 );
+        else obj = cv::imread ( filename, 1);
         if ( obj.depth() == CV_32F ) obj/=255.f;
         return ( !obj.empty() );
     }
+
 public:
-    ImageSequence() : _lab ( true )
-    {
-    cout<<"_lab is true"<<endl;
-    }
+    ImageSequence(bool lab = true) : _lab ( lab ) { cout<<"Use Lab format image: "<< _lab << endl; }
 
     ImageSequence ( std::string sequence, bool lab = false ) : _lab ( lab )
     {
@@ -184,11 +172,11 @@ public:
 
 
 template <typename t = cv::Mat>
-class cvMatSequene: public  FileSequence<t>
+class cvMatSequence: public  FileSequence<t>
 {
 public:
 
-    cvMatSequene ( std::string sequence )
+    cvMatSequence ( std::string sequence )
     {
         this->setFileSequence ( sequence );
     }
@@ -261,21 +249,20 @@ public:
         LOAD_TYPE_KITTI
     };
 
-    FlowSequence() : _loadType ( LOAD_TYPE_UNDEFINED )
-    {}
+    loadType _loadType;
+
+    FlowSequence() : _loadType ( LOAD_TYPE_UNDEFINED ){}
 
     FlowSequence ( std::string sequence, loadType lType = LOAD_TYPE_FROM_FILENAME ) :  _loadType ( lType )
     {
         setFileSequence ( sequence );
         if ( _ending=="flo" && lType == LOAD_TYPE_FROM_FILENAME ) _loadType = LOAD_TYPE_MPI;
-	if ( _ending=="png" && lType == LOAD_TYPE_FROM_FILENAME ) _loadType = LOAD_TYPE_KITTI;
+	    if ( _ending=="png" && lType == LOAD_TYPE_FROM_FILENAME ) _loadType = LOAD_TYPE_KITTI;
         assert ( _loadType != LOAD_TYPE_FROM_FILENAME && _loadType != LOAD_TYPE_UNDEFINED );
     }
 
-    loadType _loadType;
+
 private:
-
-
     void  saveFile_ ( std::string filename, const cv::Mat2f & img )
     {
         std::ofstream file;
@@ -300,7 +287,6 @@ private:
                 }
         }
         else assert ( 0 );
-
     }
 
     bool loadFile ( std::string filename, cv::Mat2f & res )
@@ -315,35 +301,36 @@ private:
             float x;
             int w,h;
 
-            file.read ( ( char* ) &x,sizeof ( float ) );
-            file.read ( ( char* ) &w,sizeof ( int ) );
-            file.read ( ( char* ) &h,sizeof ( int ) );
+            file.read ( ( char* ) &x, sizeof( float ) );
+            file.read ( ( char* ) &w, sizeof( int ) );
+            file.read ( ( char* ) &h, sizeof( int ) );
 
             assert ( x == 202021.25 );
             res =   cv::Mat2f ( h,w );
             for ( int i =0; i<h; i++ ) for ( int j =0; j<w; j++ )
                 {
-                    file.read ( ( char* ) &res ( i,j ) [0],sizeof ( float ) );
-                    file.read ( ( char* ) &res ( i,j ) [1],sizeof ( float ) );
+                    file.read ( ( char* ) &res ( i,j )[0], sizeof( float ) );
+                    file.read ( ( char* ) &res ( i,j )[1], sizeof( float ) );
                 }
         }
+
+
         else if ( _loadType == LOAD_TYPE_KITTI )
         {
-	   assert ( _ending == "png" );
+	    assert ( _ending == "png" );
             cv::Mat3f obj = cv::imread ( filename,CV_LOAD_IMAGE_UNCHANGED );
             cv::Mat3f  x = ( obj -32768 ) /64.f;
 
-            std::vector<cv::Mat1f> y;
+            std::vector<cv::Mat1f> y, y2;
             cv::split ( x,y );
-            std::vector<cv::Mat1f> y2;
             y2.push_back ( y[2] );
             y2.push_back ( y[1] );
             cv::merge ( y2,res );
             forcvmat ( i,j,res )
             {
-                if ( x ( i,j ) [0] ==-512 )  res ( i,j ) [0]=res ( i,j ) [1]=std::numeric_limits< float >::infinity();
+                if ( x ( i,j ) [0] ==-512 )  res( i,j )[0] = res( i,j )[1] = std::numeric_limits<float>::infinity();
             }
-         }
+        }
         else
         {
             std::cerr << "Unsupported type. Ending is:" << _ending << endl;
