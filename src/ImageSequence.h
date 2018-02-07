@@ -52,12 +52,11 @@ public:
         _seqZeros = sequence[p+1]-'0';
         _sequence1 = sequence.substr ( 0,p );
         _sequence2 = sequence.substr ( p+2 );
-        // std::cout<< "_sequence1" <<_sequence1<<std::endl;
         p = -1;
         for ( int i =0; i<sequence.size(); i++ ) if ( sequence[i]=='.' ) p = i;
         if ( p>=0 ) _ending = sequence.substr ( p+1 );
-        // std::cout<<"End!"<<std::endl;
     }
+
     std::string filename ( int at )
     {
         at += offset;
@@ -66,15 +65,15 @@ public:
         ss_zero_padded_num << std::setw ( _seqZeros ) << std::setfill ( '0' ) << at;
         return _sequence1 + ss_zero_padded_num.str() + _sequence2;
     }
+
     t & loadFile ( int at )
     {
-        bool success = loadFile ( filename ( at ),_data[at] );
+        bool success = loadFile ( filename(at), _data[at] );
         if ( !success ) cout <<"Warning: " << filename ( at ) << " does not exist."<<endl;
         else _state[at] |=2;
         _state[at] |=1;
         return _data[at];
     }
-
 
     bool isLoadable ( int at )
     {
@@ -88,29 +87,29 @@ public:
         // _data[at] = img;
         saveFile_ ( filename ( at ), img );
     }
+
     void saveFile ( int at )
     {
         saveFile_ ( filename ( at ), _data[at] );
     }
+
     void saveAll()
     {
         for ( int i =0; i<_data.size(); i++ ) if ( _state[i] & 1 ) saveFile ( i );
-
     }
 
-    int size()
-    {
-        return _data.size();
-    }
+    int size() { return _data.size(); }
+
     /**  Fast Access  */
     t & operator [] ( int i )
     {
-#ifdef SAVE_FILESEQUENCE_FAST_OPERATOR
-        if ( _data.size() <= i ) resize ( i+1 );
-        if ( ! ( _state[i] & 1 ) )  _data[i] = loadFile ( i );
-#endif
+    #ifdef SAVE_FILESEQUENCE_FAST_OPERATOR
+            if ( _data.size() <= i ) resize ( i+1 );
+            if ( ! ( _state[i] & 1 ) )  _data[i] = loadFile ( i );
+    #endif
         return _data[i];
     }
+
     /**  Save Access  */
     t & operator () ( int i )
     {
@@ -118,11 +117,13 @@ public:
         if ( ! ( _state[i] & 1 ) )  _data[i] = loadFile ( i );
         return _data[i];
     }
+
     void resize ( int size )
     {
         _data.resize ( size );
         _state.resize ( size,0 );
     }
+
     void resizeNoLoading ( int size )
     {
         _data.resize ( size );
@@ -161,7 +162,7 @@ class ImageSequence : public FileSequence<t>
     }
 
 public:
-    ImageSequence(bool lab = true) : _lab ( lab ) { cout<<"Use Lab format image: "<< _lab << endl; }
+    ImageSequence (bool lab = false) : _lab ( lab ) { cout<<"Use Lab format image: "<< _lab << endl; }
 
     ImageSequence ( std::string sequence, bool lab = false ) : _lab ( lab )
     {

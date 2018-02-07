@@ -53,10 +53,6 @@ def main():
     image_channels = 3
     epochs = 500000
 
-    # TODO Big control.
-    # Random guss correct ratio
-    # correct_ratio = 0.5
-    # while correct_ratio < 0.8:  # Keep training
 
     judge = Judge(image_channels, out_features, two_set_vars=two_set_vars)
     # judge._initialize_weights()

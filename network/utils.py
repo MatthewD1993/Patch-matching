@@ -11,11 +11,11 @@ class KITTIPatchesDataset(Dataset):
     img1 = "/cdengdata/data_scene_flow/training/image_2/%6_10.png"
     img2 = "/cdengdata/data_scene_flow/training/image_2/%6_11.png"
     flow = "/cdengdata/data_scene_flow/training/flow_noc/%6_10.png"
-    cntImages = 200
+    # cntImages = 200
 
-    def __init__(self, patchsize=None, scale=1, offset=0):
+    def __init__(self, patchsize=None, scale=1, offset=0, cntImages=200):
         if patchsize is not None:
-            self.patch_selector = ps.init(self.img1, self.img2, self.flow, self.cntImages, patchsize, scale, offset)
+            self.patch_selector = ps.init(self.img1, self.img2, self.flow, cntImages, patchsize, scale, offset)
             self.patch_size = patchsize
         self.data = None
         # self.newData(self.patch_selector, 10000)

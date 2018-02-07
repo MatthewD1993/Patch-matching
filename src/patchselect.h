@@ -85,8 +85,9 @@ public:
     typedef   std::pair < std::array<float, 6>, std:: array < imgtype, 2  > >  sampletype;
     typedef std::vector< sampletype  > samplelist;
 
-    ImageSequence< imgtype >  _seq0;
-    ImageSequence< imgtype >  _seq1;
+//    bool use_lab_format = false;
+    ImageSequence< imgtype >  _seq0; //_seq0._lab=use_lab_format;
+    ImageSequence< imgtype >  _seq1; //_seq1._lab=use_lab_format;
 //    std::vector < ImageSequence<cv::Mat1b> > _occ;
 
     FlowSequence  _gt;
@@ -207,7 +208,7 @@ public:
 //        cv::namedWindow("Image1");
 //        Mat s0,s1;
 
-        int s =  0;//_scale;//indexx[sfac];
+//        int s =  0;//_scale;//indexx[sfac];
         assert ( _scale ==1 );
 
         for ( int i =0; i<sml.size(); i++ ) sml[i]->ps = this;
