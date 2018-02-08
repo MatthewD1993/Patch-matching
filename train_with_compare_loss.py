@@ -104,7 +104,7 @@ def main():
 
                 print("Step %d \t loss is %f" % (step, to_np(loss)))
                 print("Pred_pos range: ", get_range(preds[0]))
-                print("Pred_pos range: ", get_range(preds[1]))
+                print("Pred_neg range: ", get_range(preds[1]))
 
                 for tag, value in judge.named_parameters():
                     tag = tag.replace('.', '/')
@@ -123,7 +123,7 @@ def main():
 
                     for p in test_loader:
                         p = Variable(p.cuda(), requires_grad=False)
-                        preds_test = judge(p)
+                        _, preds_test = judge(p)
                         test_confuse_rate.update(get_confuse_rate(preds_test))
                     test_logger.log_scalar("test_confuse_rate", test_confuse_rate.avg, step)
                     test_confuse_rate.reset()

@@ -147,11 +147,10 @@ static PyObject* requestNewData(PyObject* self, PyObject* args)
 	v->add(cnt);
 	// Create a data block. Shape(num_pairs, 2, height, width, num_channels)
 	int nd=6;
-	npy_intp dims[]={cnt, 2, 2, v->_patchsize, v->_patchsize, v->channels};
-//    cout<<"Simple new!"<<endl;
+	npy_intp dims[]={cnt, 2, 2, v->channels, v->_patchsize, v->_patchsize};
 
 	out_array = PyArray_SimpleNew(nd, dims, NPY_FLOAT32);
-//	cout<<"Be sure"<<endl;
+
 	a = (float *)PyArray_DATA(out_array);
 	cout << "Create ptr->......"<<endl;
 	v->createPyArrayPtr(a);

@@ -290,26 +290,34 @@ public:
     void createPyArrayPtr ( float * ptr ) {
     	float * pt=ptr;
     	samplelist* arr =&_pos;
-//    	int patch_s_m = _patchsize*_patchsize*channels*sizeof(float);
-    	int patch_s   = _patchsize*_patchsize*channels;
+        cout<< "Number of (pos pair, neg pair): " << arr->size()<<endl;
 
-    	cout<< "Number of (pos pair, neg pair): " << arr->size()<<endl;
+    	int patch_square = _patchsize*_patchsize;
+    	int patch_s      = patch_square*channels;
+
+    	int chan_begin = 0;
+    	int row_begin  = 0;
+    	int index      = 0;
+
     	for(int i=0; i<(*arr).size(); i++){
     		for(int ss=0; ss<2; ss++){
     			imgtype x = (*arr)[i].second[ss];
     			assert(x.rows == _patchsize);
-    			for(int j=0;j<x.rows; j++){
-    			    for(int k=0; k<x.cols; k++){
-    			        pt[0] = (float) x (j,k) [0];
-    			        pt[1] = (float) x (j,k) [1];
-    			        pt[2] = (float) x (j,k) [2];
-    			        pt += 3;
+
+    			for(int c=0; c<3; c++){
+    			    chan_begin = c*patch_square;
+    			    for (int j=0; j<x.rows; i++){
+    			        row_begin =  j*x.cols;
+                        for (int k=0; j<x.cols; j++){
+                            index = chan_begin + row_begin + k;
+                            pt[index] = (float) x(j,k)[c];
+                        }
     			    }
     			}
-
-//    			std::memcpy(pt,(float *)x.data, patch_s_m);
-//    			pt +=patch_s;
+    			pt += patch_s;
     		}
+
+
     		if (arr == &_pos){
     			arr = &_neg;
     			i--;

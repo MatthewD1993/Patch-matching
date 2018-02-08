@@ -25,8 +25,8 @@ class KITTIPatchesDataset(Dataset):
     def newData(self, num_sample_pairs=one_fetch):
         # 10000*2*2*patchsize*patchsiz*3 float numbers, about 1.47GB
         data = ps.newData(self.patch_selector, num_sample_pairs)
-        self.data = torch.FloatTensor(data).view(num_sample_pairs*2, 2, self.patch_size, self.patch_size, -1)
-        self.data = self.data.permute(0, 1, 4, 2, 3)
+        self.data = torch.FloatTensor(data).view(num_sample_pairs*2, 2, 3, self.patch_size, self.patch_size)
+        # self.data = self.data.permute(0, 1, 4, 2, 3)
 
     def __len__(self):
         return self.data.shape[0]
@@ -55,10 +55,10 @@ class KITTI_3_Dataset(Dataset):
 
     def newData(self, num_samples=one_fetch):
         data = ps.newData(self.patch_selector, num_samples)
-        self.data = torch.FloatTensor(data).view(num_samples, 4, self.patch_size, self.patch_size, 3)
+        self.data = torch.FloatTensor(data).view(num_samples, 4, 3, self.patch_size, self.patch_size)
         # Dim 2: 0 ref; 1 pos; 2 ref; 3 neg
-        self.data = self.data[:, [0,1,3], :, :, :] # Too time consuming.
-        self.data = self.data.permute(0, 1, 4, 2, 3)
+        # self.data = self.data[:, [0,1,3], :, :, :] # Too time consuming.
+        # self.data = self.data.permute(0, 1, 4, 2, 3)
 
     def __len__(self):
         return self.data.shape[0]

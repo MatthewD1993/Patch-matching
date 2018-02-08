@@ -103,11 +103,11 @@ class MoreSim(nn.Module):
         if self.two_set_vars:
             p_ref_features = self.feature_extractor_f.forward(sample[:, 0])
             p_pos_features = self.feature_extractor_s.forward(sample[:, 1])
-            p_neg_features = self.feature_extractor_s.forward(sample[:, 2])
+            p_neg_features = self.feature_extractor_s.forward(sample[:, 3])
         else:
             p_ref_features = self.feature_extractor_f.forward(sample[:, 0])
             p_pos_features = self.feature_extractor_f.forward(sample[:, 1])
-            p_neg_features = self.feature_extractor_f.forward(sample[:, 2])
+            p_neg_features = self.feature_extractor_f.forward(sample[:, 3])
         p_ref_features = p_ref_features.clone()
         p_pos_features = p_pos_features.clone()
         p_neg_features = p_neg_features.clone()
