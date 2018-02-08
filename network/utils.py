@@ -48,16 +48,16 @@ class KITTI_3_Dataset(Dataset):
     flow = "/cdengdata/data_scene_flow/training/flow_noc/%6_10.png"
     one_fetch = 16384
 
-    def __init__(self, patchsize, offset=0, cntImages=200):
+    def __init__(self, patchsize, offset=0, scale=1, cntImages=200):
         self.patch_selector = ps.init(self.img1, self.img2, self.flow, cntImages, patchsize, scale, offset)
         self.patch_size = patchsize
         self.data = None
 
     def newData(self, num_samples=one_fetch):
         data = ps.newData(self.patch_selector, num_samples)
-        self.data = torch.FloatTensor(data).view(num_samples, 4, self.patch_size, self.patch_size, -1)
+        self.data = torch.FloatTensor(data).view(num_samples, 4, self.patch_size, self.patch_size, 3)
         # Dim 2: 0 ref; 1 pos; 2 ref; 3 neg
-        self.data = self.data[:, [0,1,3], :, :, :]
+        self.data = self.data[:, [0,1,3], :, :, :] # Too time consuming.
         self.data = self.data.permute(0, 1, 4, 2, 3)
 
     def __len__(self):
@@ -72,7 +72,7 @@ def compare_loss(input_p, input_n):
 
 
 class CompareLoss(Function):
-    def forward(self, input_p, input_n, t=0.1, size_average=True):
+    def forward(self, input_p, input_n, t=0.05, size_average=True):
         self.size_average = size_average
 
         buffer = input_p.new()
@@ -131,7 +131,6 @@ class CompareLoss(Function):
     #         grad_input_p.mul_(grad_output[0])
     #         grad_input_n.mul_(grad_output[0])
     #     return grad_input_p, grad_input_n, None, None
-
 
 
 def new_hinge_loss(input, target, margin=1.0, t=0.3, size_average=True):
@@ -228,15 +227,20 @@ def accuracy(pred, label, margin=1.0, t=0.3):
     acc[torch.mul(torch.eq(label, -1), torch.gt(pred, 0.5*(margin+t)))] = 1
     return torch.mean(acc)
 
-# TODO: Make this Function compatible with new pred format. (MoreSim network output.)
-def get_confuse_rate(pred, label=None):
+
+def get_confuse_rate(preds, label=None):
     """Assume the order in a batch is well preserved.
     Then, pred [p, n, p, n, ...] if correct: pred[2*i] < pred[2*i + 1]
     """
-    if isinstance(pred, Variable):
-        preds = pred.data.cpu().numpy()
-    assert type(preds) is np.ndarray
-    # confuse_status = np.zeros(preds.size)
-    confuse_status = [preds[2*i] >= preds[2*i+1] for i in range(preds.shape[0]//2)]
+    if isinstance(preds, tuple):
+        preds_pos = preds[0].data.cpu().numpy()
+        preds_neg = preds[1].data.cpu().numpy()
+        confuse_status = np.greater_equal(preds_pos, preds_neg)*1
+
+    if isinstance(preds, Variable):
+        preds = preds.data.cpu().numpy()
+        assert type(preds) is np.ndarray
+        # confuse_status = np.zeros(preds.size)
+        confuse_status = [preds[2*i] >= preds[2*i+1] for i in range(preds.shape[0]//2)]
     return np.mean(confuse_status)
 

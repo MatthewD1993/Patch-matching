@@ -68,6 +68,8 @@ class Judge(nn.Module):
 
 
 class MoreSim(nn.Module):
+    sim_dict = {'dist_sim': nn.PairwiseDistance(p=2), 'cos_sim': nn.CosineSimilarity()}
+
     def __init__(self, image_channels, out_features, cmp='dist_sim', init_weight=True, two_set_vars=False):
         super(MoreSim, self).__init__()
         assert cmp in ['dist_sim', 'cos_sim']
@@ -105,7 +107,7 @@ class MoreSim(nn.Module):
         else:
             p_ref_features = self.feature_extractor_f.forward(sample[:, 0])
             p_pos_features = self.feature_extractor_f.forward(sample[:, 1])
-            p_neg_features = self.feature_extractor_f.forward(sample[:, 1])
+            p_neg_features = self.feature_extractor_f.forward(sample[:, 2])
         p_ref_features = p_ref_features.clone()
         p_pos_features = p_pos_features.clone()
         p_neg_features = p_neg_features.clone()
@@ -116,7 +118,7 @@ class MoreSim(nn.Module):
         # print("patch feature shape is", p0_features.size())
 
         loss = self.compare_loss(pred_pos, pred_neg)
-        return pred_pos, pred_neg, loss
+        return loss, (pred_pos, pred_neg)
 
     def _initialize_weights(self):
         for m in self.modules():

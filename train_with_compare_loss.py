@@ -1,6 +1,6 @@
-from network.models import Judge
+from network.models import MoreSim
 from network.utils import new_hinge_loss, accuracy, get_confuse_rate
-from network.utils import KITTIPatchesDataset
+from network.utils import KITTI_3_Dataset
 from network.logger import Logger
 
 import torch
@@ -45,19 +45,20 @@ def to_RGB(x):
     if not patch_is_BGR:
         x_converted = cv2.cvtColor(x, cv2.COLOR_LAB2RGB)
     else:
+        # BGR to RGB. Visual effect is not good probably because of mean extraction.
         x_converted = x[:, :, [2, 0, 1]]
     return x_converted
 
 
 def main():
-    log_dir = "./log_1set_v_sep_train_test/"
+    log_dir = "./log_with_compare_loss/origin/"
     two_set_vars = False
     patchsize = 56
     out_features = 256
     image_channels = 3
     max_epochs = 50000
 
-    judge = Judge(image_channels, out_features, two_set_vars=two_set_vars)
+    judge = MoreSim(image_channels, out_features, two_set_vars=two_set_vars)
 
     # Use multiple GPUs
     if len(gpus) > 1:
@@ -71,47 +72,39 @@ def main():
 
     train_images = 160
     test_images  = 40
-    train_patch_set = KITTIPatchesDataset(patchsize, cntImages=train_images, offset=0)
+    train_patch_set = KITTI_3_Dataset(patchsize, cntImages=train_images, offset=0)
     train_patch_set.newData()
     train_loader = DataLoader(train_patch_set, batch_size=256, num_workers=4, pin_memory=True, drop_last=True)
 
-    test_patch_set = KITTIPatchesDataset(patchsize, cntImages=test_images, offset=train_images)
+    test_patch_set = KITTI_3_Dataset(patchsize, cntImages=test_images, offset=train_images)
     test_patch_set.newData()
     test_loader = DataLoader(test_patch_set, batch_size=256, num_workers=4, pin_memory=True, drop_last=True)
 
-    margin = 1.
-    threshold = 0.3
-
-    test_acc = AverageMeter()
     test_confuse_rate = AverageMeter()
 
     for e in range(max_epochs):
         train_patch_set.newData()
-        for i, (pairs_d, labels_d) in enumerate(train_loader):
+        for i, pairs_d in enumerate(train_loader):
             step = e * len(train_loader) + i
 
             pairs = Variable(pairs_d.cuda(0, async=True), requires_grad=False)
-            # print("Input pairs shape(should be [Batch size,2,3,56,56])", pairs.shape)
-            labels = Variable(labels_d.cuda(0, async=True), requires_grad=False)
 
-            preds = judge(pairs)
-            loss = new_hinge_loss(preds, labels)
+            loss, preds = judge(pairs)
 
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
 
             if step % 50 == 0:
-                train_acc = accuracy(preds, labels, margin, threshold)
                 train_confuse_rate = get_confuse_rate(preds)
 
-                train_logger.log_scalar("accuracy", train_acc, step)
                 train_logger.log_scalar("confuse_rate", train_confuse_rate, step)
                 train_logger.log_scalar("loss", to_np(loss), step)
-                train_logger.log_histogram("preds", to_np(preds), step)
+                # train_logger.log_histogram("preds", to_np(preds), step)
 
                 print("Step %d \t loss is %f" % (step, to_np(loss)))
-                print("Preds range: ", get_range(preds))
+                print("Pred_pos range: ", get_range(preds[0]))
+                print("Pred_pos range: ", get_range(preds[1]))
 
                 for tag, value in judge.named_parameters():
                     tag = tag.replace('.', '/')
@@ -119,26 +112,20 @@ def main():
                     train_logger.log_histogram(tag+'/grad', to_np(value.grad), step)
 
                 # Randomly select 1 (pos pair, neg pair) to log for visualization.
-                pos_image_pairs = np.random.choice(np.arange(0, train_loader.batch_size, 2), 1, replace=False)
+                pos_image_pairs = np.random.choice(np.arange(0, train_loader.batch_size), 1, replace=False)
                 for idx in pos_image_pairs:
                     train_logger.log_images("pos", [to_RGB(pairs_d[idx][0]), to_RGB(pairs_d[idx][1])], step)
                     # train_logger.log_images("pos_1", to_RGB(pairs_d[idx][1]), step)
-                    train_logger.log_images("neg", [to_RGB(pairs_d[idx+1][0]), to_RGB(pairs_d[idx+1][1])], step)
+                    train_logger.log_images("neg", [to_RGB(pairs_d[idx][0]), to_RGB(pairs_d[idx][2])], step)
 
                 if step % 100 == 0:
                     test_patch_set.newData()
 
-                    for p, l in test_loader:
-                        p = Variable(p.cuda(0,), requires_grad=False)
-                        l = Variable(l.cuda(0,), requires_grad=False)
-                        pred = judge(p)
-                        test_acc.update(accuracy(pred, l))
-                        test_confuse_rate.update(get_confuse_rate(pred))
-                    test_logger.log_scalar("test_acc", test_acc.avg, step)
+                    for p in test_loader:
+                        p = Variable(p.cuda(), requires_grad=False)
+                        preds_test = judge(p)
+                        test_confuse_rate.update(get_confuse_rate(preds_test))
                     test_logger.log_scalar("test_confuse_rate", test_confuse_rate.avg, step)
-
-                    # Must reset after every test.
-                    test_acc.reset()
                     test_confuse_rate.reset()
 
                     if (step+1) % 10000 == 0:

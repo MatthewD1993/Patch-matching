@@ -1,12 +1,13 @@
+from network.utils import new_hinge_loss, compare_loss, accuracy
 import torch
-from network.utils import new_hinge_loss, compare_loss
+from torch.autograd import Variable, gradcheck
 
-# def to_np(x):
-#     return x.data.cpu().numpy()
-#
-#
+
+def to_np(x):
+    return x.data.cpu().numpy()
+
+# Testing my hinge loss, test backward.
 # a_m = torch.autograd.Variable(torch.FloatTensor([0.1]), requires_grad=True)
-#
 #
 # for i in range(100):
 #     a = torch.Tensor([[0.2], [0.3]])
@@ -28,24 +29,15 @@ from network.utils import new_hinge_loss, compare_loss
 #     a_m.grad.zero_()
 
 
+# # Test "compare loss" grad==========================================
 
+p = Variable(torch.FloatTensor([0.5, 0.8]), requires_grad=True)
+n = Variable(torch.FloatTensor([0.3, 0.7]), requires_grad=True)
 
-# # Test grad==========================================
-
-from network.utils import new_hinge_loss, accuracy
-import torch.nn.functional as F
-import torch
-from torch.autograd import Variable, gradcheck
-#
-p = Variable(torch.FloatTensor([0.5, 0.5]), requires_grad=True)
-n = Variable(torch.FloatTensor([0.55, 0.7]), requires_grad=True)
-#
-# # loss = new_hinge_loss(a, t)
-# loss = F.hinge_embedding_loss(a,t)
-# print(loss.data)
-# loss.backward()
-# print(a.grad)
-# print(t.grad)
-#
 test = gradcheck(compare_loss, (p, n), eps=1e-4, atol=1e-4)
 print(test)
+
+loss = compare_loss(p,n)
+loss.backward()
+print('p gradient: ', p.grad.data)
+print('n gradient: ', n.grad.data)
