@@ -114,8 +114,8 @@ public:
 	    sml.clear();
 	    ssl.clear();
 	    sml.push_back ( new patchselect::selectorMain() );
-	    ssl.push_back ( new patchselect::selectorSec ( 2*scale ) );
-	    ssl.push_back ( new patchselect::selectorClose ( 2*scale,200*scale ) );
+//	    ssl.push_back ( new patchselect::selectorSec ( 2*scale ) );
+//	    ssl.push_back ( new patchselect::selectorClose ( 2*scale,200*scale ) );
 	    ssl.push_back ( new patchselect::selectorClose ( 2*scale,100*scale ) );
 	    ssl.push_back ( new patchselect::selectorClose ( 2*scale,50*scale ) );
 	    ssl.push_back ( new patchselect::selectorClose ( 2*scale,20*scale ) );
@@ -151,10 +151,13 @@ public:
 //                cout<< "size of each element is " <<sizeof(x(0,0))<<endl;
                 for ( int p=0; p<channels; p++ )
                 {
-//                        float m_min=10000, m_max=-10000;
-//                        for ( int k =0; k<x.rows; k++ )
-//                        for ( int l =0; l<x.cols; l++ ){m_min=min(x(k,l)[p], m_min); m_max=max(x(k,l)[p], m_min);};
-//                        cout<<"Image "<<i<< " channel " << p<< " Range " << m_min<<" "<<m_max<<endl;
+/*                    float m_min=10000, m_max=-10000;
+                    for ( int k =0; k<x.rows; k++ )
+                    for ( int l =0; l<x.cols; l++ ){ m_min=min(x(k,l)[p], m_min); m_max=max(x(k,l)[p], m_min);};
+                    cout <<"Image "<< i << " channel " << p << " Range " << m_min <<" "<< m_max << endl;
+
+*/
+
                     double mean = 0;
                     double stdev= 0;
 
@@ -174,6 +177,7 @@ public:
                         x ( k,l )[p] *= stdev;
                         assert ( !isnan ( x ( k,l ) [p] ) );
                         }
+
 
                 }
             }

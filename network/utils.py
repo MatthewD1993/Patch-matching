@@ -53,7 +53,7 @@ class KITTI_3_Dataset(Dataset):
         self.patch_size = patchsize
         self.data = None
 
-    def newData(self, num_samples=one_fetch, visualize =True):
+    def newData(self, num_samples=one_fetch, visualize =False):
         data = ps.newData(self.patch_selector, num_samples)
         print('data shape:', data.shape)
         self.data = torch.FloatTensor(data).view(num_samples, 4, 3, self.patch_size, self.patch_size)

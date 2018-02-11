@@ -147,7 +147,8 @@ static PyObject* requestNewData(PyObject* self, PyObject* args)
 	v->add(cnt);
 	// Create a data block. Shape(num_pairs, 2, height, width, num_channels)
 	int nd=6;
-	npy_intp dims[]={cnt, 2, 2, v->channels, v->_patchsize, v->_patchsize};
+	npy_intp dims[]={cnt, 2, 2,  v->channels, v->_patchsize, v->_patchsize};
+    cout<<"Simple new!"<<endl;
 
 	out_array = PyArray_SimpleNew(nd, dims, NPY_FLOAT32);
 

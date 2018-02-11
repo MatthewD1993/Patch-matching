@@ -14,7 +14,7 @@ import cv2
 
 
 # torch.set_printoptions(precision=6)
-gpus = [0]
+gpus = [3]
 os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
 os.environ['CUDA_VISIBLE_DEVICES'] = ','.join([str(g) for g in gpus])
 
@@ -86,8 +86,10 @@ def main():
         train_patch_set.newData()
         for i, pairs_d in enumerate(train_loader):
             step = e * len(train_loader) + i
-
-            pairs = Variable(pairs_d.cuda(gpus[0], async=True), requires_grad=False)
+            if len(gpus) == 1:
+                pairs = Variable(pairs_d.cuda(async=True), requires_grad=False)
+            else:
+                pairs = Variable(pairs_d.cuda(gpus[0], async=True), requires_grad=False)
 
             loss, preds = judge(pairs)
 

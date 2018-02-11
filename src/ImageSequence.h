@@ -162,7 +162,7 @@ class ImageSequence : public FileSequence<t>
     }
 
 public:
-    ImageSequence (bool lab = true) : _lab ( lab ) { cout<<"Use Lab format image: "<< _lab << endl; }
+    ImageSequence (bool lab = false) : _lab ( lab ) { cout<<"Use Lab format image: "<< _lab << endl; }
 
     ImageSequence ( std::string sequence, bool lab = false ) : _lab ( lab )
     {
