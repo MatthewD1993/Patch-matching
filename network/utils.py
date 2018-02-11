@@ -4,7 +4,7 @@ from torch.autograd import Function, Variable
 from torch.autograd.function import once_differentiable
 from torch.utils.data import Dataset
 import numpy as np
-# import cv2
+import cv2
 
 print('Patch selecet:', ps.__file__)
 
@@ -46,19 +46,28 @@ class KITTI_3_Dataset(Dataset):
     img1 = "/cdengdata/data_scene_flow/training/image_2/%6_10.png"
     img2 = "/cdengdata/data_scene_flow/training/image_2/%6_11.png"
     flow = "/cdengdata/data_scene_flow/training/flow_noc/%6_10.png"
-    one_fetch = 16384
+    one_fetch = 2 << 12
 
     def __init__(self, patchsize, offset=0, scale=1, cntImages=200):
         self.patch_selector = ps.init(self.img1, self.img2, self.flow, cntImages, patchsize, scale, offset)
         self.patch_size = patchsize
         self.data = None
 
-    def newData(self, num_samples=one_fetch):
+    def newData(self, num_samples=one_fetch, visualize =True):
         data = ps.newData(self.patch_selector, num_samples)
+        print('data shape:', data.shape)
         self.data = torch.FloatTensor(data).view(num_samples, 4, 3, self.patch_size, self.patch_size)
         # Dim 2: 0 ref; 1 pos; 2 ref; 3 neg
         # self.data = self.data[:, [0,1,3], :, :, :] # Too time consuming.
         # self.data = self.data.permute(0, 1, 4, 2, 3)
+        samples = np.random.choice(num_samples,3)
+        if visualize:
+            for i in samples:
+                s = data[i, 0, 0, ...]
+                s = np.transpose(s, (1, 2, 0))
+                s = cv2.cvtColor(s, cv2.COLOR_LAB2RGB)
+                cv2.imshow('img', s)
+                cv2.waitKey(0)
 
     def __len__(self):
         return self.data.shape[0]
@@ -72,7 +81,7 @@ def compare_loss(input_p, input_n):
 
 
 class CompareLoss(Function):
-    def forward(self, input_p, input_n, t=0.05, size_average=True):
+    def forward(self, input_p, input_n, t=0.1, size_average=True):
         self.size_average = size_average
 
         buffer = input_p.new()

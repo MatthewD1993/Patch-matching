@@ -86,8 +86,8 @@ public:
     typedef std::vector< sampletype  > samplelist;
 
 //    bool use_lab_format = false;
-    ImageSequence< imgtype >  _seq0; //_seq0._lab=use_lab_format;
-    ImageSequence< imgtype >  _seq1; //_seq1._lab=use_lab_format;
+    ImageSequence< imgtype >  _seq0;
+    ImageSequence< imgtype >  _seq1;
 //    std::vector < ImageSequence<cv::Mat1b> > _occ;
 
     FlowSequence  _gt;
@@ -204,11 +204,6 @@ public:
 // cnt: The number of training pairs. (positive pairs, negative pairs). Total num of images = cnt*4
     void add ( int cnt, bool addPositive = true)
     {
-//        cv::namedWindow("Image0");
-//        cv::namedWindow("Image1");
-//        Mat s0,s1;
-
-//        int s =  0;//_scale;//indexx[sfac];
         assert ( _scale ==1 );
 
         for ( int i =0; i<sml.size(); i++ ) sml[i]->ps = this;
@@ -243,17 +238,6 @@ public:
                 // p1.second[0] = _seq0[pos1.im] ( cv::Rect ( pos1.x,pos1.y,_psreal,_psreal ) );
                 p1.second[1] = _seq1[pos1.im] ( cv::Rect ( pos2p.x,pos2p.y,_psreal,_psreal ) );
 
-                // cout<<"Break -2"<<endl;
-
-                // imgtype img1 = 
-                // imgtype img2 = 
-                // cout<<"Break -1"<<endl;
-
-
-                // cv::resize ( img1 ( cv::Rect ( scaleCut[s], scaleCut[s], img1.cols-scaleCut[s]*2, img1.rows-scaleCut[s]*2 ) ),p1.second[0] ,cv::Size ( _patchsize,_patchsize ),0,0,CV_INTER_AREA );
-                // cv::resize ( img2 ( cv::Rect ( scaleCut[s], scaleCut[s], img1.cols-scaleCut[s]*2, img1.rows-scaleCut[s]*2 ) ),p1.second[1] ,cv::Size ( _patchsize,_patchsize ),0,0,CV_INTER_AREA );
-                // cv::putText(p1.second[0], std::to_string(s), cv::Point(10, 10), cv::FONT_HERSHEY_PLAIN, 1.0, CV_RGB(0,255,0), 2.0);
-                // cout<<"Break 0"<<endl;
                 _pos.push_back ( p1 );
                 // assert ( pos1.x >=0 || pos1.y >= 0 && pos2p.x >= 0 && pos2p.y >=0 && ( pos2p.x-pos1.x- _gt[pos1.im] ( pos1.y,pos1.x ) [0] ) <1.1f );
             }
@@ -274,15 +258,7 @@ public:
         
                 _neg.push_back ( n1 );
                 assert ( pos1.x >=0 || pos1.y >= 0 && pos2n.x >= 0 && pos2n.y >=0 && ( pos2n.x-pos1.x- _gt[pos1.im] ( pos1.y,pos1.x ) [0] ) >2.1f );
-
             }
-
-
-//            cv::cvtColor(n1.second[0], s0, cv::COLOR_Lab2BGR);
-//            cv::cvtColor(n1.second[1], s1, cv::COLOR_Lab2BGR);
-//            cv::imshow("Image0", s0);
-//            cv::imshow("Image1", s1);
-//            cv::waitKey(500);
 
         }
     }
@@ -300,15 +276,17 @@ public:
     	int index      = 0;
 
     	for(int i=0; i<(*arr).size(); i++){
+//            cout << 'Number of samples: ' << i << endl;
+
     		for(int ss=0; ss<2; ss++){
     			imgtype x = (*arr)[i].second[ss];
     			assert(x.rows == _patchsize);
 
     			for(int c=0; c<3; c++){
     			    chan_begin = c*patch_square;
-    			    for (int j=0; j<x.rows; i++){
+    			    for (int j=0; j<x.rows; j++){
     			        row_begin =  j*x.cols;
-                        for (int k=0; j<x.cols; j++){
+                        for (int k=0; k<x.cols; k++){
                             index = chan_begin + row_begin + k;
                             pt[index] = (float) x(j,k)[c];
                         }

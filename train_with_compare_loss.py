@@ -14,12 +14,12 @@ import cv2
 
 
 # torch.set_printoptions(precision=6)
-gpus = [3]
+gpus = [0]
 os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
 os.environ['CUDA_VISIBLE_DEVICES'] = ','.join([str(g) for g in gpus])
 
 # Set to False if patch format is Lab.
-patch_is_BGR = True
+patch_is_BGR = False
 
 
 def to_np(x):
@@ -51,7 +51,7 @@ def to_RGB(x):
 
 
 def main():
-    log_dir = "./log_with_compare_loss/origin/"
+    log_dir = "./log_with_compare_loss/compare_loss_lab/"
     two_set_vars = False
     patchsize = 56
     out_features = 256
@@ -87,7 +87,7 @@ def main():
         for i, pairs_d in enumerate(train_loader):
             step = e * len(train_loader) + i
 
-            pairs = Variable(pairs_d.cuda(0, async=True), requires_grad=False)
+            pairs = Variable(pairs_d.cuda(gpus[0], async=True), requires_grad=False)
 
             loss, preds = judge(pairs)
 

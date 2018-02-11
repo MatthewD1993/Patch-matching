@@ -156,6 +156,7 @@ static PyObject* requestNewData(PyObject* self, PyObject* args)
 	v->createPyArrayPtr(a);
 	cout << "Data Loaded!" << endl;
 	return out_array;
+}
 
 
 //	v->reset();
@@ -191,11 +192,6 @@ static PyObject* requestNewData(PyObject* self, PyObject* args)
 //	cout << "Data Loaded!" << endl;
 //	return out_array;
 
-
-
-
-
-}
 
 
 static PyMethodDef PatchselectMethods[] = {
