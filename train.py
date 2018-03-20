@@ -14,7 +14,7 @@ import cv2
 
 
 # torch.set_printoptions(precision=6)
-gpus = [3]
+gpus = [2]
 os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
 os.environ['CUDA_VISIBLE_DEVICES'] = ','.join([str(g) for g in gpus])
 
@@ -49,25 +49,55 @@ def to_RGB(x):
     return x_converted
 
 
+def save_model(net, optim, epoch, ckpt_fname):
+    # state_dict = net.state_dict()
+    # for key in state_dict.keys():
+    #     state_dict[key] = state_dict[key].cpu()
+    torch.save(
+        {
+            'epoch': epoch,
+            'state_dict': net.state_dict(),
+            'optimizer': optim.state_dict(),
+        },
+        ckpt_fname
+    )
+
+
 def main():
-    log_dir = "./log_1set_v_sep_train_test/"
+    # Configuration.
+    log_dir = "./log_evaluate_chrisitan/"
+    saved_model = './torch2pytorch/christian_weight.ckpt'
+    resume = True
+    train = False
     two_set_vars = False
     patchsize = 56
-    out_features = 256
-    image_channels = 3
     max_epochs = 50000
+    start_epoch = 0
+    lr = 0.00005
+    # max_epochs = 60
 
-    judge = Judge(image_channels, out_features, two_set_vars=two_set_vars)
+    judge = Judge(two_set_vars=two_set_vars)
 
     # Use multiple GPUs
     if len(gpus) > 1:
         judge = DataParallel(judge.cuda(gpus[0]), device_ids=gpus)
     else:
         judge = judge.cuda()
+    optimizer = optim.Adam(judge.parameters(), lr=lr)
+
+    if resume:
+        ckpt = torch.load(saved_model)
+        if train:
+            judge.load_state_dict(ckpt['state_dict'])
+            start_epoch = ckpt['epoch']
+            optimizer.load_state_dict(ckpt['optimizer'])
+            for param_group in optimizer.param_groups:
+                param_group['lr'] = lr
+        else:
+            judge.load_state_dict(ckpt)
 
     train_logger = Logger(log_dir=log_dir + "train")
     test_logger = Logger(log_dir=log_dir + "test")
-    optimizer = optim.Adam(judge.parameters(), lr=0.0001)
 
     train_images = 160
     test_images  = 40
@@ -85,14 +115,17 @@ def main():
     test_acc = AverageMeter()
     test_confuse_rate = AverageMeter()
 
-    for e in range(max_epochs):
+    for e in range(start_epoch, max_epochs):
         train_patch_set.newData()
         for i, (pairs_d, labels_d) in enumerate(train_loader):
             step = e * len(train_loader) + i
 
-            pairs = Variable(pairs_d.cuda(0, async=True), requires_grad=False)
-            # print("Input pairs shape(should be [Batch size,2,3,56,56])", pairs.shape)
-            labels = Variable(labels_d.cuda(0, async=True), requires_grad=False)
+            # pairs = Variable(pairs_d.cuda(0, async=True), requires_grad=False)
+            # # print("Input pairs shape(should be [Batch size,2,3,56,56])", pairs.shape)
+            # labels = Variable(labels_d.cuda(0, async=True), requires_grad=False)
+
+            pairs = Variable(pairs_d.cuda(), requires_grad=False)
+            labels = Variable(labels_d.cuda(), requires_grad=False)
 
             preds = judge(pairs)
             loss = new_hinge_loss(preds, labels)
@@ -126,23 +159,23 @@ def main():
                     train_logger.log_images("neg", [to_RGB(pairs_d[idx+1][0]), to_RGB(pairs_d[idx+1][1])], step)
 
                 if step % 100 == 0:
-                    test_patch_set.newData()
-
                     for p, l in test_loader:
-                        p = Variable(p.cuda(0,), requires_grad=False)
-                        l = Variable(l.cuda(0,), requires_grad=False)
+                        # p = Variable(p.cuda(0,), requires_grad=False)
+                        # l = Variable(l.cuda(0,), requires_grad=False)
+                        p = Variable(p.cuda(), requires_grad=False)
+                        l = Variable(l.cuda(), requires_grad=False)
                         pred = judge(p)
                         test_acc.update(accuracy(pred, l))
                         test_confuse_rate.update(get_confuse_rate(pred))
-                    test_logger.log_scalar("test_acc", test_acc.avg, step)
-                    test_logger.log_scalar("test_confuse_rate", test_confuse_rate.avg, step)
+                    test_logger.log_scalar("accuracy", test_acc.avg, step)
+                    test_logger.log_scalar("confuse_rate", test_confuse_rate.avg, step)
 
                     # Must reset after every test.
                     test_acc.reset()
                     test_confuse_rate.reset()
 
-                    if (step+1) % 10000 == 0:
-                        torch.save(judge.state_dict(), log_dir+"check_"+str(step))
+        if e % 10 == 0:
+            save_model(judge, optimizer, e, log_dir+"check_epoch"+str(e))
 
 
 class AverageMeter(object):

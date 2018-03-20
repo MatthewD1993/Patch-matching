@@ -9,7 +9,7 @@ class Judge(nn.Module):
     # Normalize each vector, and calculate cosine similarity, 1 means exact same.
     sim_dict = {'dist_sim': nn.PairwiseDistance(p=2), 'cos_sim': nn.CosineSimilarity()}
 
-    def __init__(self, image_channels, out_features, cmp='dist_sim', init_weight=True, two_set_vars=False):
+    def __init__(self, image_channels=3, cmp='dist_sim', init_weight=True, two_set_vars=False):
         super(Judge, self).__init__()
         assert cmp in ['dist_sim', 'cos_sim']
         self.feature_extractor_f = nn.Sequential(
@@ -25,8 +25,10 @@ class Judge(nn.Module):
             nn.Tanh(),
             nn.Conv2d(256, 512, 5),
             nn.Tanh(),
-            nn.Conv2d(512, out_features, 1),
-            nn.Tanh()
+            nn.Conv2d(512, 512, 1),
+            nn.Tanh(),
+            nn.Conv2d(512, 256, 1),
+            nn.Tanh(),
         )
         self.sim = self.sim_dict[cmp]
         self.two_set_vars = two_set_vars
@@ -70,7 +72,7 @@ class Judge(nn.Module):
 class MoreSim(nn.Module):
     sim_dict = {'dist_sim': nn.PairwiseDistance(p=2), 'cos_sim': nn.CosineSimilarity()}
 
-    def __init__(self, image_channels, out_features, cmp='dist_sim', init_weight=True, two_set_vars=False):
+    def __init__(self, image_channels=3, cmp='dist_sim', init_weight=True, two_set_vars=False):
         super(MoreSim, self).__init__()
         assert cmp in ['dist_sim', 'cos_sim']
         self.feature_extractor_f = nn.Sequential(
@@ -86,8 +88,9 @@ class MoreSim(nn.Module):
             nn.Tanh(),
             nn.Conv2d(256, 512, 5),
             nn.Tanh(),
-            nn.Conv2d(512, out_features, 1),
-            nn.Tanh()
+            nn.Conv2d(512, 512, 1),
+            nn.Tanh(),
+            nn.Conv2d(512, 256, 1)
         )
         self.sim = self.sim_dict[cmp]
         self.two_set_vars = two_set_vars

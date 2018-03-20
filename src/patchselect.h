@@ -114,8 +114,9 @@ public:
 	    sml.clear();
 	    ssl.clear();
 	    sml.push_back ( new patchselect::selectorMain() );
-//	    ssl.push_back ( new patchselect::selectorSec ( 2*scale ) );
-//	    ssl.push_back ( new patchselect::selectorClose ( 2*scale,200*scale ) );
+	    ssl.push_back ( new patchselect::selectorSec ( 2*scale ) );
+	    ssl.push_back ( new patchselect::selectorClose ( 2*scale,200*scale ) );
+
 	    ssl.push_back ( new patchselect::selectorClose ( 2*scale,100*scale ) );
 	    ssl.push_back ( new patchselect::selectorClose ( 2*scale,50*scale ) );
 	    ssl.push_back ( new patchselect::selectorClose ( 2*scale,20*scale ) );
@@ -159,22 +160,25 @@ public:
 */
 
                     double mean = 0;
-                    double stdev= 0;
+//                    double stdev= 0;
+                    double max = 255;
 
                     for ( int k =0; k<x.rows; k++ )
                         for ( int l =0; l<x.cols; l++ ){
-                            stdev += x(k,l)[p] * x(k,l)[p];
+//                            stdev += x(k,l)[p] * x(k,l)[p];
                             mean  += x(k,l)[p];
                             }
 
                     mean/= ( float ) ( x.rows*x.cols );
-                    // Actually inverse of std variance.
-                    stdev= 1.f/sqrt ( stdev/ ( float ) ( x.rows*x.cols ) );
+                    max /= max;
+//                    // Actually inverse of std variance.
+//                    stdev= 1.f/sqrt ( stdev/ ( float ) ( x.rows*x.cols ) );
 
                     for ( int k =0; k<x.rows; k++ )
                         for ( int l =0; l<x.cols; l++ ){
                         x ( k,l )[p] -= mean;
-                        x ( k,l )[p] *= stdev;
+//                        x ( k,l )[p] *= stdev;
+                        x ( k,l )[p] *= max;
                         assert ( !isnan ( x ( k,l ) [p] ) );
                         }
 

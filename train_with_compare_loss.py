@@ -19,7 +19,8 @@ os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
 os.environ['CUDA_VISIBLE_DEVICES'] = ','.join([str(g) for g in gpus])
 
 # Set to False if patch format is Lab.
-patch_is_BGR = False
+patch_is_BGR = True
+norm = True
 
 
 def to_np(x):
@@ -39,6 +40,14 @@ def to_var(x):
     return Variable(x)
 
 
+def cast_to_range255(x):
+    min = np.min(x)
+    max = np.max(x)
+    m = 255/(max - min)
+    normal_x = (x-min) * m
+    return normal_x.astype(int)
+
+
 def to_RGB(x):
     # Color channel move to the last dim.
     x = x.permute(1, 2, 0).numpy()
@@ -47,11 +56,13 @@ def to_RGB(x):
     else:
         # BGR to RGB. Visual effect is not good probably because of mean extraction.
         x_converted = x[:, :, [2, 0, 1]]
+        if norm:
+            x_converted = cast_to_range255(x_converted)
     return x_converted
 
 
 def main():
-    log_dir = "./log_with_compare_loss/compare_loss_lab/"
+    log_dir = "./log_with_compare_loss/compare_RGB_100pixel/"
     two_set_vars = False
     patchsize = 56
     out_features = 256
