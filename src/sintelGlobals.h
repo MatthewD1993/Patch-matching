@@ -11,8 +11,7 @@ const int seqLengths[] = {50,50,21,33,50,20,50,50,50,50,50,50,50,50,50,40,49,50,
 int itrainset[] = {0,2,4,5,6,7,9,11,14,15,16,17,20,21};
 std::vector<int> isets [4] = {{0,2,4,5,6,7,9,11,14,15,16,17,20,21},{1,3,8,10,12,13,18,19,22},{3},{0}};//testset
 
-const std::string datapath = "/bailerdata/Sintel/mpi/training/"; //Set this
-//const std::string datapath = "/disk1/home/bailer/data/flow/mpi/training/"; //Set this
+const std::string datapath = "/cdengdata/MPI-Sintel-complete/training/"; //Set this
 const std::string evalpath = "/media/serv/data/flowevalANN/";//"/disk1/home/bailer/data/floweval/";
 
 

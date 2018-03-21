@@ -1,6 +1,6 @@
 from network.models import Judge
 from network.utils import new_hinge_loss, accuracy, get_confuse_rate
-from network.utils import KITTIPatchesDataset
+from network.utils import KITTIPatchesDataset, SintelPatchesDataset
 from network.logger import Logger
 
 import torch
@@ -13,8 +13,7 @@ import numpy as np
 import cv2
 
 
-# torch.set_printoptions(precision=6)
-gpus = [2]
+gpus = [0]
 os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
 os.environ['CUDA_VISIBLE_DEVICES'] = ','.join([str(g) for g in gpus])
 
@@ -65,9 +64,10 @@ def save_model(net, optim, epoch, ckpt_fname):
 
 def main():
     # Configuration.
-    log_dir = "./log_evaluate_chrisitan/"
+    log_dir = "./sintel_0/"
+
     saved_model = './torch2pytorch/christian_weight.ckpt'
-    resume = True
+    resume = False
     train = False
     two_set_vars = False
     patchsize = 56
@@ -86,6 +86,7 @@ def main():
     optimizer = optim.Adam(judge.parameters(), lr=lr)
 
     if resume:
+        print('Restore from checkpoint: ', saved_model)
         ckpt = torch.load(saved_model)
         if train:
             judge.load_state_dict(ckpt['state_dict'])
@@ -96,16 +97,18 @@ def main():
         else:
             judge.load_state_dict(ckpt)
 
+    if not os.path.exists(log_dir):
+        os.mkdir(log_dir)
     train_logger = Logger(log_dir=log_dir + "train")
     test_logger = Logger(log_dir=log_dir + "test")
 
-    train_images = 160
-    test_images  = 40
-    train_patch_set = KITTIPatchesDataset(patchsize, cntImages=train_images, offset=0)
+    train_images = 833 # 160
+    test_images  = 208
+    train_patch_set = SintelPatchesDataset(patchsize, cntImages=train_images, offset=0)
     train_patch_set.newData()
     train_loader = DataLoader(train_patch_set, batch_size=256, num_workers=4, pin_memory=True, drop_last=True)
 
-    test_patch_set = KITTIPatchesDataset(patchsize, cntImages=test_images, offset=train_images)
+    test_patch_set = SintelPatchesDataset(patchsize, cntImages=test_images, offset=train_images)
     test_patch_set.newData()
     test_loader = DataLoader(test_patch_set, batch_size=256, num_workers=4, pin_memory=True, drop_last=True)
 

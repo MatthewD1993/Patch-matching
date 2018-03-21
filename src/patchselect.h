@@ -9,7 +9,6 @@ class patchselect
 {
 public:
 
-    static const int scales = 1;//hard!
     const int channels = 3;
 
     typedef cv::Mat_< cv::Vec<float,3> >  imgtype;
@@ -80,8 +79,6 @@ public:
     };
 
 
-    int scaleCut[scales];
-
     typedef   std::pair < std::array<float, 6>, std:: array < imgtype, 2  > >  sampletype;
     typedef std::vector< sampletype  > samplelist;
 
@@ -100,11 +97,11 @@ public:
     samplelist _neg;
 
     imgtype lpos,lneg,rpos,rneg;
-    int _psreal;
 
 	// Add two class variable. sml, ssl
 	std::vector<patchselect::selectorMain*>  sml;
 	std::vector<patchselect::selectorSec*>  ssl;
+
 
 
 
@@ -123,13 +120,6 @@ public:
 	    ssl.push_back ( new patchselect::selectorClose ( 2*scale,10*scale ) );
 	    ssl.push_back ( new patchselect::selectorClose ( 2*scale,10*scale ) );
 
-        _psreal = patchsize;
-        // for ( int i =1; i< scales; i++ ) _psreal*=2;
-        //  _psreal*= scale;
-//        cout << "Size real:" << _psreal << endl;
-
-        // scaleCut[0]=0;
-        // for ( int i = 1, s = _psreal/4;  i< scales ; i++, s/=2 ) scaleCut[i]= scaleCut[i-1] + s;
 
         // int cnt = 0;
 
@@ -137,8 +127,13 @@ public:
         _seq1.offset = offset;
         _seq0.setFileSequence ( image1 );
         _seq1.setFileSequence ( image2 );
+
         _gt.offset = offset;
+#ifdef KITTI
         _gt._loadType = _gt.LOAD_TYPE_KITTI;
+#else
+        _gt._loadType = _gt.LOAD_TYPE_MPI;
+#endif
         _gt.setFileSequence ( flow );
 
         // Load and preprocess seqs.
@@ -185,8 +180,8 @@ public:
 
                 }
             }
-            cv::copyMakeBorder ( _seq0[i], _seq0[i],_psreal/2, ( _psreal-1 ) /2,_psreal/2, ( _psreal-1 ) /2,cv::BORDER_REPLICATE );
-            cv::copyMakeBorder ( _seq1[i], _seq1[i],_psreal/2, ( _psreal-1 ) /2,_psreal/2, ( _psreal-1 ) /2,cv::BORDER_REPLICATE );
+            cv::copyMakeBorder ( _seq0[i], _seq0[i], _patchsize/2, ( _patchsize-1 )/2, _patchsize/2, ( _patchsize-1 )/2, cv::BORDER_REPLICATE );
+            cv::copyMakeBorder ( _seq1[i], _seq1[i], _patchsize/2, ( _patchsize-1 )/2, _patchsize/2, ( _patchsize-1 )/2, cv::BORDER_REPLICATE );
 
         }
     }
@@ -234,7 +229,7 @@ public:
             // float gy = _gt ( pos1.im ) ( pos1.y,pos1.x ) [0];
 
             // float gs =  sqrtf ( gx*gx+gy*gy );
-            imgtype ref = _seq0[pos1.im] ( cv::Rect ( pos1.x,pos1.y,_psreal,_psreal ) );
+            imgtype ref = _seq0[pos1.im] ( cv::Rect ( pos1.x,pos1.y,_patchsize,_patchsize ) );
             sampletype  n1,p1;
 
 
@@ -243,11 +238,11 @@ public:
 //                sampletype  p1;
                 p1.first = {0, pos1.im, pos1.x, pos1.y, pos2p.x, pos2p.y};
                 p1.second[0] = ref;
-                // p1.second[0] = _seq0[pos1.im] ( cv::Rect ( pos1.x,pos1.y,_psreal,_psreal ) );
-                p1.second[1] = _seq1[pos1.im] ( cv::Rect ( pos2p.x,pos2p.y,_psreal,_psreal ) );
+                // p1.second[0] = _seq0[pos1.im] ( cv::Rect ( pos1.x,pos1.y,_patchsize,_patchsize ) );
+                p1.second[1] = _seq1[pos1.im] ( cv::Rect ( pos2p.x,pos2p.y,_patchsize,_patchsize ) );
 
                 _pos.push_back ( p1 );
-                // assert ( pos1.x >=0 || pos1.y >= 0 && pos2p.x >= 0 && pos2p.y >=0 && ( pos2p.x-pos1.x- _gt[pos1.im] ( pos1.y,pos1.x ) [0] ) <1.1f );
+                 assert ( pos1.x >=0 || pos1.y >= 0 && pos2p.x >= 0 && pos2p.y >=0 && ( pos2p.x-pos1.x- _gt[pos1.im] ( pos1.y,pos1.x ) [0] ) <1.1f );
             }
 
             if ( ssl.size() )   //TODO: set size
@@ -262,7 +257,7 @@ public:
                 float disttopos = sqrtf ( ( pos2n.x - pos2p.x ) * ( pos2n.x - pos2p.x ) + ( pos2n.y - pos2p.y ) * ( pos2n.y - pos2p.y ) );
                 n1.first = {disttopos, pos1.im, pos1.x, pos1.y, pos2n.x, pos2n.y};
                 n1.second[0] = ref;
-                n1.second[1] = _seq1[pos1.im] ( cv::Rect( pos2n.x, pos2n.y, _psreal, _psreal) );
+                n1.second[1] = _seq1[pos1.im] ( cv::Rect( pos2n.x, pos2n.y, _patchsize, _patchsize) );
         
                 _neg.push_back ( n1 );
                 assert ( pos1.x >=0 || pos1.y >= 0 && pos2n.x >= 0 && pos2n.y >=0 && ( pos2n.x-pos1.x- _gt[pos1.im] ( pos1.y,pos1.x ) [0] ) >2.1f );

@@ -9,23 +9,21 @@ import cv2
 print('Patch selecet:', ps.__file__)
 
 
-class KITTIPatchesDataset(Dataset):
-    img1 = "/cdengdata/data_scene_flow/training/image_2/%6_10.png"
-    img2 = "/cdengdata/data_scene_flow/training/image_2/%6_11.png"
-    flow = "/cdengdata/data_scene_flow/training/flow_noc/%6_10.png"
-    one_fetch = 32768
-
-    def __init__(self, patchsize, scale=1, offset=0, cntImages=200):
+class PatchDataset(Dataset):
+    def __init__(self, patchsize, cntImages=200, offset=0, scale=1):
 
         self.patch_selector = ps.init(self.img1, self.img2, self.flow, cntImages, patchsize, scale, offset)
-        self.patch_size = patchsize
         self.data = None
         # self.newData(self.patch_selector, 10000)
 
-    def newData(self, num_sample_pairs=one_fetch):
+    def newData(self, num_sample_pairs=None):
         # 10000*2*2*patchsize*patchsiz*3 float numbers, about 1.47GB
+        if num_sample_pairs is None:
+            num_sample_pairs = self.one_fetch
         data = ps.newData(self.patch_selector, num_sample_pairs)
-        self.data = torch.FloatTensor(data).view(num_sample_pairs*2, 2, 3, self.patch_size, self.patch_size)
+        shape = data.shape
+        print('data shape is: ', data.shape)
+        self.data = torch.FloatTensor(data).view(num_sample_pairs*2, 2, 3, shape[-2], shape[-1])
         # self.data = self.data.permute(0, 1, 4, 2, 3)
 
     def __len__(self):
@@ -40,6 +38,30 @@ class KITTIPatchesDataset(Dataset):
 
     def load_data(self, path):
         self.data = torch.FloatTensor(np.load(path))
+
+
+class KITTIPatchesDataset(PatchDataset):
+    img1 = "/cdengdata/data_scene_flow/training/image_2/%6_10.png"
+    img2 = "/cdengdata/data_scene_flow/training/image_2/%6_11.png"
+    flow = "/cdengdata/data_scene_flow/training/flow_noc/%6_10.png"
+
+    def __init__(self, patchsize, cntImages=200, offset=0, scale=1):
+        super().__init__(patchsize, cntImages=cntImages, offset=offset, scale=scale)
+        self.one_fetch = 16384
+
+
+class SintelPatchesDataset(PatchDataset):
+
+    img1 = "/cdengdata/MPI-Sintel-complete/patch_train/clean/%6_0.png"
+    img2 = "/cdengdata/MPI-Sintel-complete/patch_train/clean/%6_1.png"
+    flow = "/cdengdata/MPI-Sintel-complete/patch_train/flow/%6_0.flo"
+
+    def __init__(self, patchsize, cntImages=200, offset=0, scale=1):
+        super().__init__(patchsize, cntImages=cntImages, offset=offset, scale=scale)
+        self.one_fetch = 16384
+
+
+
 
 
 class KITTI_3_Dataset(Dataset):
