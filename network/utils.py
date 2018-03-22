@@ -23,7 +23,7 @@ class PatchDataset(Dataset):
         data = ps.newData(self.patch_selector, num_sample_pairs)
         shape = data.shape
         print('data shape is: ', data.shape)
-        self.data = torch.FloatTensor(data).view(num_sample_pairs*2, 2, shape[-3], shape[-2], shape[-1])
+        self.data = torch.FloatTensor(data).view(num_sample_pairs*2, *shape[2:])
         self.data = self.data.permute(0, 1, 4, 2, 3).contiguous()
 
     def __len__(self):
@@ -81,7 +81,8 @@ class KITTI_3_Dataset(Dataset):
     def newData(self, num_samples=one_fetch, visualize=False):
         data = ps.newData(self.patch_selector, num_samples)
         shape = data.shape
-        self.data = torch.FloatTensor(data).view(num_samples, 4, 3, shape[-2], shape[-1])
+        self.data = torch.FloatTensor(data).view(num_samples, 4, *shape[3:])
+        self.data = self.data.permute(0, 1, 4, 2, 3).contiguous()
         # Dim 2: 0 ref; 1 pos; 2 ref; 3 neg
         # self.data = self.data[:, [0,1,3], :, :, :] # Too time consuming.
         # self.data = self.data.permute(0, 1, 4, 2, 3)
@@ -89,8 +90,7 @@ class KITTI_3_Dataset(Dataset):
         if visualize:
             for i in samples:
                 s = data[i, 0, 0, ...]
-                s = np.transpose(s, (1, 2, 0))
-                s = cv2.cvtColor(s, cv2.COLOR_LAB2RGB)
+                # s = cv2.cvtColor(s, cv2.COLOR_LAB2RGB) # if patch is in Lab format.
                 cv2.imshow('img', s)
                 cv2.waitKey(0)
 

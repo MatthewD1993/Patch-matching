@@ -80,7 +80,7 @@ public:
         int maxDistQ;
         int maxDist;
 
-        selectorClose ( int mindDist = 10,int maxDist = 100 ) :selectorSec(mindDist), maxDist(maxDist), maxDistQ(maxDist*maxDist){}
+        selectorClose ( int mindDist=10, int maxDist=100) :selectorSec(mindDist), maxDist(maxDist), maxDistQ(maxDist*maxDist){}
 
         ssPos get ( const cv::Point2i & p, int scale )
         {
@@ -154,7 +154,9 @@ public:
         _gt.setFileSequence ( flow );
 
         // Load and preprocess seqs.
-         #pragma omp parallel for
+        #pragma omp parallel num_threads(4)
+        {
+        #pragma omp  for
         for ( int i=0; i< _cntImages; i++ )
         {
             _gt ( i );
@@ -202,6 +204,8 @@ public:
             cv::copyMakeBorder ( _seq1[i], _seq1[i], _patchsize/2, ( _patchsize-1 )/2, _patchsize/2, ( _patchsize-1 )/2, cv::BORDER_REPLICATE );
 
         }
+        }
+
     }
 
     cv::Point2i getgtPos2p ( selectorMain::smPos & pos )
@@ -227,7 +231,7 @@ public:
     {
         assert ( _scale ==1 );
 
-        for ( int i =0; i<sml.size(); i++ ) sml[i]->ps = this;
+        for ( unsigned int i =0; i<sml.size(); i++ ) sml[i]->ps = this;
 
         for ( int i =0; i< cnt; i++ )
         {
@@ -254,7 +258,7 @@ public:
             if ( addPositive )
             {
 //                sampletype  p1;
-                p1.first = {0, pos1.im, pos1.x, pos1.y, pos2p.x, pos2p.y};
+                p1.first = {0, (float)pos1.im, (float)pos1.x, (float)pos1.y, (float)pos2p.x, (float)pos2p.y};
                 p1.second[0] = ref;
                 // p1.second[0] = _seq0[pos1.im] ( cv::Rect ( pos1.x,pos1.y,_patchsize,_patchsize ) );
                 p1.second[1] = _seq1[pos1.im] ( cv::Rect ( pos2p.x,pos2p.y,_patchsize,_patchsize ) );
@@ -273,7 +277,7 @@ public:
 
 //                sampletype  n1;
                 float disttopos = sqrtf ( ( pos2n.x - pos2p.x ) * ( pos2n.x - pos2p.x ) + ( pos2n.y - pos2p.y ) * ( pos2n.y - pos2p.y ) );
-                n1.first = {disttopos, pos1.im, pos1.x, pos1.y, pos2n.x, pos2n.y};
+                n1.first = {disttopos, (float)pos1.im, (float)pos1.x, (float)pos1.y, (float)pos2n.x, (float)pos2n.y};
                 n1.second[0] = ref;
                 n1.second[1] = _seq1[pos1.im] ( cv::Rect( pos2n.x, pos2n.y, _patchsize, _patchsize) );
         
@@ -296,8 +300,8 @@ public:
 //    	int row_begin  = 0;
 //    	int index      = 0;
 
-        #pragma omp parallel for
-    	for(int i=0; i<(*arr).size(); i++){
+        #pragma omp  for
+    	for(unsigned int i=0; i<(*arr).size(); i++){
 //            cout << 'Number of samples: ' << i << endl;
 
     		for(int ss=0; ss<2; ss++){

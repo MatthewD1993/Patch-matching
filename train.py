@@ -64,16 +64,16 @@ def save_model(net, optim, epoch, ckpt_fname):
 
 def main():
     # Configuration.
-    log_dir = "./sintel_test_bailer_weights/"
+    log_dir = "./sintel_1_lr_e-3/"
 
     saved_model = './torch2pytorch/bailer_weight_Sintel.ckpt'
-    resume = True
-    train = False
+    resume = False
+    train = True
     two_set_vars = False
     patchsize = 56
     max_epochs = 50000
     start_epoch = 0
-    lr = 0.00005
+    lr = 0.001
     # max_epochs = 60
 
     judge = Judge(two_set_vars=two_set_vars)
