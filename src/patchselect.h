@@ -1,9 +1,26 @@
+#include <omp.h>
 #include "ImageSequence.h"
 #include <boost/concept_check.hpp>
 // #include "sintelGlobals.h"
 #include <opencv/cv.h>
 #include <opencv2/core/core.hpp>
 using namespace cv;
+
+#include <boost/random.hpp>
+#include <ctime>
+
+typedef boost::mt19937 RNGType;
+RNGType gen(std::time(0));
+
+int randomIVal(int max)
+{
+    boost::uniform_int<> dist(0, max-1);
+    boost::variate_generator<boost::mt19937&, boost::uniform_int<> > r(gen, dist);
+    return r();
+}
+
+
+
 
 class patchselect
 {
@@ -137,6 +154,7 @@ public:
         _gt.setFileSequence ( flow );
 
         // Load and preprocess seqs.
+         #pragma omp parallel for
         for ( int i=0; i< _cntImages; i++ )
         {
             _gt ( i );
@@ -274,10 +292,11 @@ public:
     	int patch_square = _patchsize*_patchsize;
     	int patch_s      = patch_square*channels;
 
-    	int chan_begin = 0;
-    	int row_begin  = 0;
-    	int index      = 0;
+//    	int chan_begin = 0;
+//    	int row_begin  = 0;
+//    	int index      = 0;
 
+        #pragma omp parallel for
     	for(int i=0; i<(*arr).size(); i++){
 //            cout << 'Number of samples: ' << i << endl;
 
@@ -285,16 +304,21 @@ public:
     			imgtype x = (*arr)[i].second[ss];
     			assert(x.rows == _patchsize);
 
-    			for(int c=0; c<3; c++){
-    			    chan_begin = c*patch_square;
-    			    for (int j=0; j<x.rows; j++){
-    			        row_begin =  j*x.cols;
-                        for (int k=0; k<x.cols; k++){
-                            index = chan_begin + row_begin + k;
-                            pt[index] = (float) x(j,k)[c];
-                        }
-    			    }
-    			}
+    			if (!x.isContinuous()){ x = x.clone(); }
+//
+    			memcpy(pt, (float*)x.data, sizeof(float)*patch_s);
+
+//                #pragma omp parallel for
+//    			for(int c=0; c<3; c++){
+//    			    chan_begin = c*patch_square;
+//    			    for (int j=0; j<x.rows; j++){
+//    			        row_begin =  j*x.cols;
+//                        for (int k=0; k<x.cols; k++){
+//                            index = chan_begin + row_begin + k;
+//                            pt[index] = (float) x(j,k)[c];
+//                        }
+//    			    }
+//    			}
     			pt += patch_s;
     		}
 

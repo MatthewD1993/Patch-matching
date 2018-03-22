@@ -3,7 +3,9 @@
 #include <numpy/arrayobject.h>
 #include "patchselect.h"
 #include <opencv2/core/core.hpp>
+#include <ctime>
 using namespace cv;
+
 // static void free_patchselect(void* p)
 // {
 // 	printf("Free the patchselect.\n");
@@ -144,17 +146,24 @@ static PyObject* requestNewData(PyObject* self, PyObject* args)
 	v = static_cast<patchselect*>(PyCapsule_GetPointer(p, nullptr));
 	
 	v->reset();
+
+	clock_t startTime = clock();
 	v->add(cnt);
+	clock_t time_chunk_over = clock();
+	cout << "Time to create patches chunk (s): " << (time_chunk_over - startTime)/CLOCKS_PER_SEC <<endl;
 	// Create a data block. Shape(num_pairs, 2, height, width, num_channels)
 	int nd=6;
-	npy_intp dims[]={cnt, 2, 2,  v->channels, v->_patchsize, v->_patchsize};
+	npy_intp dims[]={cnt, 2, 2, v->_patchsize, v->_patchsize, v->channels};
     cout<<"Simple new!"<<endl;
 
 	out_array = PyArray_SimpleNew(nd, dims, NPY_FLOAT32);
 
 	a = (float *)PyArray_DATA(out_array);
 	cout << "Create ptr->......"<<endl;
+	clock_t time_start_mem = clock();
+	cout<<"In the middle(s): " << (time_start_mem-time_chunk_over)/CLOCKS_PER_SEC << endl;
 	v->createPyArrayPtr(a);
+	cout << "Time to create memory: (s):"<< (clock()-time_start_mem)/CLOCKS_PER_SEC  << endl;
 	cout << "Data Loaded!" << endl;
 	return out_array;
 }

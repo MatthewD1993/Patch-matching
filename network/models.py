@@ -27,7 +27,7 @@ class Judge(nn.Module):
             nn.Tanh(),
             nn.Conv2d(512, 512, 1),
             nn.Tanh(),
-            nn.Conv2d(512, 256, 1),
+            nn.Conv2d(512, 128  , 1),
             nn.Tanh(),
         )
         self.sim = self.sim_dict[cmp]

@@ -23,8 +23,8 @@ class PatchDataset(Dataset):
         data = ps.newData(self.patch_selector, num_sample_pairs)
         shape = data.shape
         print('data shape is: ', data.shape)
-        self.data = torch.FloatTensor(data).view(num_sample_pairs*2, 2, 3, shape[-2], shape[-1])
-        # self.data = self.data.permute(0, 1, 4, 2, 3)
+        self.data = torch.FloatTensor(data).view(num_sample_pairs*2, 2, shape[-3], shape[-2], shape[-1])
+        self.data = self.data.permute(0, 1, 4, 2, 3).contiguous()
 
     def __len__(self):
         return self.data.shape[0]
@@ -65,9 +65,12 @@ class SintelPatchesDataset(PatchDataset):
 
 
 class KITTI_3_Dataset(Dataset):
-    img1 = "/cdengdata/data_scene_flow/training/image_2/%6_10.png"
-    img2 = "/cdengdata/data_scene_flow/training/image_2/%6_11.png"
-    flow = "/cdengdata/data_scene_flow/training/flow_noc/%6_10.png"
+    # img1 = "/cdengdata/data_scene_flow/training/image_2/%6_10.png"
+    # img2 = "/cdengdata/data_scene_flow/training/image_2/%6_11.png"
+    # flow = "/cdengdata/data_scene_flow/training/flow_noc/%6_10.png"
+    img1 = "/cdengdata/MPI-Sintel-complete/patch_train/clean/%6_0.png"
+    img2 = "/cdengdata/MPI-Sintel-complete/patch_train/clean/%6_1.png"
+    flow = "/cdengdata/MPI-Sintel-complete/patch_train/flow/%6_0.flo"
     one_fetch = 2 << 12
 
     def __init__(self, patchsize, offset=0, scale=1, cntImages=200):
@@ -77,8 +80,8 @@ class KITTI_3_Dataset(Dataset):
 
     def newData(self, num_samples=one_fetch, visualize=False):
         data = ps.newData(self.patch_selector, num_samples)
-        print('data shape:', data.shape)
-        self.data = torch.FloatTensor(data).view(num_samples, 4, 3, self.patch_size, self.patch_size)
+        shape = data.shape
+        self.data = torch.FloatTensor(data).view(num_samples, 4, 3, shape[-2], shape[-1])
         # Dim 2: 0 ref; 1 pos; 2 ref; 3 neg
         # self.data = self.data[:, [0,1,3], :, :, :] # Too time consuming.
         # self.data = self.data.permute(0, 1, 4, 2, 3)

@@ -64,10 +64,10 @@ def save_model(net, optim, epoch, ckpt_fname):
 
 def main():
     # Configuration.
-    log_dir = "./sintel_0/"
+    log_dir = "./sintel_test_bailer_weights/"
 
-    saved_model = './torch2pytorch/christian_weight.ckpt'
-    resume = False
+    saved_model = './torch2pytorch/bailer_weight_Sintel.ckpt'
+    resume = True
     train = False
     two_set_vars = False
     patchsize = 56
