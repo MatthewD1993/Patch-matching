@@ -160,11 +160,11 @@ class MoreSim(nn.Module):
         if self.two_set_vars:
             p_ref_features = self.feature_extractor_f.forward(sample[:, 0])
             p_pos_features = self.feature_extractor_s.forward(sample[:, 1])
-            p_neg_features = self.feature_extractor_s.forward(sample[:, 3])
+            p_neg_features = self.feature_extractor_s.forward(sample[:, 2])
         else:
             p_ref_features = self.feature_extractor_f.forward(sample[:, 0])
             p_pos_features = self.feature_extractor_f.forward(sample[:, 1])
-            p_neg_features = self.feature_extractor_f.forward(sample[:, 3])
+            p_neg_features = self.feature_extractor_f.forward(sample[:, 2])
         p_ref_features = p_ref_features.clone()
         p_pos_features = p_pos_features.clone()
         p_neg_features = p_neg_features.clone()
@@ -188,3 +188,62 @@ class MoreSim(nn.Module):
             elif isinstance(m, nn.BatchNorm2d):
                 m.weight.data.fill_(1)
                 m.bias.data.zero_()
+
+
+class MoreSim_Small(nn.Module):
+    sim_dict = {'dist_sim': nn.PairwiseDistance(p=2), 'cos_sim': nn.CosineSimilarity()}
+
+    def __init__(self, image_channels=3, cmp='dist_sim', init_weight=True, two_set_vars=False):
+        super(MoreSim_Small, self).__init__()
+        assert cmp in ['dist_sim', 'cos_sim']
+        self.feature_extractor_f = nn.Sequential(
+            nn.Conv2d(image_channels, 64, 7, stride=2),
+            nn.LeakyReLU(0.1, inplace=True),
+            nn.Conv2d(64, 128, 5, stride=2),
+            nn.LeakyReLU(0.1, inplace=True),
+            nn.Conv2d(128, 256, 5),
+            nn.LeakyReLU(0.1, inplace=True),
+        )
+        self.sim = self.sim_dict[cmp]
+        self.two_set_vars = two_set_vars
+        self.compare_loss = compare_loss
+
+        assert init_weight, "Only true option is supported."
+        self._initialize_weights()
+        if two_set_vars:
+            self.feature_extractor_s = copy.deepcopy(self.feature_extractor_f)
+
+    def forward(self, sample):
+        # print("Sample shape is:", sample.size())
+        if self.two_set_vars:
+            p_ref_features = self.feature_extractor_f.forward(sample[:, 0])
+            p_pos_features = self.feature_extractor_s.forward(sample[:, 1])
+            p_neg_features = self.feature_extractor_s.forward(sample[:, 2])
+        else:
+            p_ref_features = self.feature_extractor_f.forward(sample[:, 0])
+            p_pos_features = self.feature_extractor_f.forward(sample[:, 1])
+            p_neg_features = self.feature_extractor_f.forward(sample[:, 2])
+        p_ref_features = p_ref_features.clone()
+        p_pos_features = p_pos_features.clone()
+        p_neg_features = p_neg_features.clone()
+
+        # Squeeze the last dimension, [[f0],[f1]...[f511]]
+        pred_pos = self.sim(p_ref_features.squeeze_(), p_pos_features.squeeze_())
+        pred_neg = self.sim(p_ref_features.squeeze_(), p_neg_features.squeeze_())
+        # print("patch feature shape is", p0_features.size())
+
+        loss = self.compare_loss(pred_pos, pred_neg)
+        return loss, (pred_pos, pred_neg)
+
+    def _initialize_weights(self):
+        for m in self.modules():
+            print("Module", m)
+            if isinstance(m, nn.Conv2d):
+                n = m.kernel_size[0] * m.kernel_size[1] * m.out_channels
+                m.weight.data.normal_(0, math.sqrt(2. / n))
+                if m.bias is not None:
+                    m.bias.data.zero_()
+            elif isinstance(m, nn.BatchNorm2d):
+                m.weight.data.fill_(1)
+                m.bias.data.zero_()
+

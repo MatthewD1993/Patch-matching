@@ -1,6 +1,6 @@
-from network.models import Judge, Judge_small
+from network.models import Judge, Judge_small, MoreSim_Small
 from network.utils import new_hinge_loss, accuracy, get_confuse_rate, update_lr
-from network.utils import KITTIPatchesDataset, SintelPatchesDataset
+from network.utils import Compare_Dataset
 from network.logger import Logger
 
 import torch
@@ -12,12 +12,30 @@ import os
 import numpy as np
 import cv2
 
-gpus = [2]
+gpus = [3]
 os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
 os.environ['CUDA_VISIBLE_DEVICES'] = ','.join([str(g) for g in gpus])
 
 # Set to False if patch format is Lab.
 patch_is_BGR = True
+
+
+class AverageMeter(object):
+    """Computes and stores the average and current value"""
+    def __init__(self):
+        self.reset()
+
+    def reset(self):
+        self.val = 0
+        self.avg = 0
+        self.sum = 0
+        self.count = 0
+
+    def update(self, val, n=1):
+        self.val = val
+        self.sum += val * n
+        self.count += n
+        self.avg = self.sum / self.count
 
 
 def to_np(x):
@@ -63,28 +81,26 @@ def save_model(net, optim, epoch, ckpt_fname):
 
 def main():
     # Configuration.
-    log_dir = "/cdengdata/patchmatching/sintel_small_validate_kitti/"
+    log_dir = "/cdengdata/patchmatching/sintel_small_compare_loss/"
 
-    saved_model = '/cdengdata/patchmatching/sintel_f256_small_auto_lr_e-4/check_epoch3700'
-    dataset = 'KITTI'
-    resume = True
-    train = False
+    saved_model = '/'
+    dataset = 'Sintel'
+    resume = False
+    train = True
     two_set_vars = False
     patchsize = 31
-    max_epochs = 50000
+    max_epochs = 5000
     start_epoch = 400 if resume else 0
-    lr = 0
-    # max_epochs = 60
+    lr = 1e-4
 
-    # judge = Judge(two_set_vars=two_set_vars)
-    judge = Judge_small(two_set_vars=two_set_vars)
+    model = MoreSim_Small(two_set_vars=two_set_vars)
 
     # Use multiple GPUs
     if len(gpus) > 1:
-        judge = DataParallel(judge.cuda(gpus[0]), device_ids=gpus)
+        model = DataParallel(model.cuda(gpus[0]), device_ids=gpus)
     else:
-        judge = judge.cuda()
-    optimizer = optim.Adam(judge.parameters(), lr=lr)
+        model = model.cuda()
+    optimizer = optim.Adam(model.parameters(), lr=lr)
 
     if resume:
         print('>>> Restore from checkpoint: ', saved_model)
@@ -106,13 +122,12 @@ def main():
     if dataset == 'KITTI':
         train_images = 160
         test_images = 40
-        train_patch_set = KITTIPatchesDataset(patchsize, cntImages=train_images, offset=0)
-        test_patch_set = KITTIPatchesDataset(patchsize, cntImages=test_images, offset=train_images)
     elif dataset == 'Sintel':
         train_images = 833  # 160
         test_images = 208
-        train_patch_set = SintelPatchesDataset(patchsize, cntImages=train_images, offset=0)
-        test_patch_set = SintelPatchesDataset(patchsize, cntImages=test_images, offset=train_images)
+
+    train_patch_set = Compare_Dataset(patchsize, cntImages=train_images, offset=0, dataset=dataset)
+    test_patch_set = Compare_Dataset(patchsize, cntImages=test_images, offset=train_images, dataset=dataset)
 
     train_patch_set.newData()
     train_loader = DataLoader(train_patch_set, batch_size=256, num_workers=4, pin_memory=True, drop_last=True)
@@ -120,47 +135,43 @@ def main():
     test_patch_set.newData()
     test_loader = DataLoader(test_patch_set, batch_size=256, num_workers=4, pin_memory=True, drop_last=True)
 
-    margin = 1.
-    threshold = 0.3
-
-    test_acc = AverageMeter()
+    test_loss = AverageMeter()
     test_confuse_rate = AverageMeter()
 
     for e in range(start_epoch, max_epochs):
         train_patch_set.newData()
-        for i, (pairs_d, labels_d) in enumerate(train_loader):
+        for i, pairs_d in enumerate(train_loader):
             step = e * len(train_loader) + i
 
             # pairs = Variable(pairs_d.cuda(0, async=True), requires_grad=False)
             # # print("Input pairs shape(should be [Batch size,2,3,56,56])", pairs.shape)
             # labels = Variable(labels_d.cuda(0, async=True), requires_grad=False)
 
+            # print('pairs_d length: ', len(pairs_d))
+            # print('pairs_d 0 shape: ', pairs_d[0].shape)
+
             pairs = Variable(pairs_d.cuda(), requires_grad=False)
-            labels = Variable(labels_d.cuda(), requires_grad=False)
-            preds = judge(pairs)
-            loss = new_hinge_loss(preds, labels)
+            loss, preds = model(pairs)
 
             if train:
                 optimizer.zero_grad()
                 loss.backward()
                 optimizer.step()
-
                 lr = update_lr(optimizer, step)
 
             if step % 50 == 0:
-                train_acc = accuracy(preds, labels, margin, threshold)
                 train_confuse_rate = get_confuse_rate(preds)
 
-                train_logger.log_scalar("accuracy", train_acc, step)
                 train_logger.log_scalar("confuse_rate", train_confuse_rate, step)
                 train_logger.log_scalar("loss", to_np(loss)[0], step)
-                train_logger.log_histogram("preds", to_np(preds), step)
+                # train_logger.log_histogram("preds", to_np(preds), step)
                 train_logger.log_scalar("lr", lr, step)
 
                 print("Step %d \t loss is %f" % (step, to_np(loss)))
-                print("Preds range: ", get_range(preds))
+                print("Pos preds range: ", get_range(preds[0]))
+                print("Neg preds range: ", get_range(preds[1]))
 
-                for tag, value in judge.named_parameters():
+                for tag, value in model.named_parameters():
                     tag = tag.replace('.', '/')
                     train_logger.log_histogram(tag, to_np(value), step)
                     if train:
@@ -174,40 +185,22 @@ def main():
                 #     train_logger.log_images("neg", [to_RGB(pairs_d[idx+1][0]), to_RGB(pairs_d[idx+1][1])], step)
 
                 if step % 100 == 0:
-                    for p, l in test_loader:
+                    for s in test_loader:
 
-                        p = Variable(p.cuda(), requires_grad=False)
-                        l = Variable(l.cuda(), requires_grad=False)
-                        pred = judge(p)
-                        test_acc.update(accuracy(pred, l))
+                        s = Variable(s.cuda(), requires_grad=False)
+                        loss, pred = model(s)
+                        test_loss.update(to_np(loss)[0])
                         test_confuse_rate.update(get_confuse_rate(pred))
-                    test_logger.log_scalar("accuracy", test_acc.avg, step)
+                    test_logger.log_scalar("loss", test_loss.avg, step)
                     test_logger.log_scalar("confuse_rate", test_confuse_rate.avg, step)
 
                     # Must reset after every test.
-                    test_acc.reset()
+                    test_loss.reset()
                     test_confuse_rate.reset()
 
         if e % 100 == 0:
-            save_model(judge, optimizer, e, log_dir+"check_epoch"+str(e))
+            save_model(model, optimizer, e, log_dir+"check_epoch"+str(e))
 
-
-class AverageMeter(object):
-    """Computes and stores the average and current value"""
-    def __init__(self):
-        self.reset()
-
-    def reset(self):
-        self.val = 0
-        self.avg = 0
-        self.sum = 0
-        self.count = 0
-
-    def update(self, val, n=1):
-        self.val = val
-        self.sum += val * n
-        self.count += n
-        self.avg = self.sum / self.count
 
 if __name__ == '__main__':
     main()

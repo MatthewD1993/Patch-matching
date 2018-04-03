@@ -5,7 +5,7 @@ from torch.autograd.function import once_differentiable
 from torch.utils.data import Dataset
 import numpy as np
 import cv2
-
+import time
 print('Patch selecet:', ps.__file__)
 
 
@@ -58,36 +58,45 @@ class SintelPatchesDataset(PatchDataset):
 
     def __init__(self, patchsize, cntImages=200, offset=0, scale=1):
         super().__init__(patchsize, cntImages=cntImages, offset=offset, scale=scale)
-        self.one_fetch = 16384
+        self.one_fetch = 2 << 14  # 16384
 
 
+class Compare_Dataset(Dataset):
+    one_fetch = 2 << 14
 
-
-
-class KITTI_3_Dataset(Dataset):
-    # img1 = "/cdengdata/data_scene_flow/training/image_2/%6_10.png"
-    # img2 = "/cdengdata/data_scene_flow/training/image_2/%6_11.png"
-    # flow = "/cdengdata/data_scene_flow/training/flow_noc/%6_10.png"
-    img1 = "/cdengdata/MPI-Sintel-complete/patch_train/clean/%6_0.png"
-    img2 = "/cdengdata/MPI-Sintel-complete/patch_train/clean/%6_1.png"
-    flow = "/cdengdata/MPI-Sintel-complete/patch_train/flow/%6_0.flo"
-    one_fetch = 2 << 12
-
-    def __init__(self, patchsize, offset=0, scale=1, cntImages=200):
-        self.patch_selector = ps.init(self.img1, self.img2, self.flow, cntImages, patchsize, scale, offset)
+    def __init__(self, patchsize, offset=0, scale=1, cntImages=200, dataset=None):
+        if dataset == 'KITTI':
+            img1 = "/cdengdata/data_scene_flow/training/image_2/%6_10.png"
+            img2 = "/cdengdata/data_scene_flow/training/image_2/%6_11.png"
+            flow = "/cdengdata/data_scene_flow/training/flow_noc/%6_10.png"
+        elif dataset == 'Sintel':
+            img1 = "/cdengdata/MPI-Sintel-complete/patch_train/clean/%6_0.png"
+            img2 = "/cdengdata/MPI-Sintel-complete/patch_train/clean/%6_1.png"
+            flow = "/cdengdata/MPI-Sintel-complete/patch_train/flow/%6_0.flo"
+        self.patch_selector = ps.init(img1, img2, flow, cntImages, patchsize, scale, offset)
         self.patch_size = patchsize
         self.data = None
 
-    def newData(self, num_samples=one_fetch, visualize=False):
+    def newData(self, num_samples=None, visualize=False):
+        if num_samples is None:
+            num_samples = self.one_fetch
         data = ps.newData(self.patch_selector, num_samples)
         shape = data.shape
-        self.data = torch.FloatTensor(data).view(num_samples, 4, *shape[3:])
-        self.data = self.data.permute(0, 1, 4, 2, 3).contiguous()
-        # Dim 2: 0 ref; 1 pos; 2 ref; 3 neg
-        # self.data = self.data[:, [0,1,3], :, :, :] # Too time consuming.
+        start = time.time()
+        data = data.reshape((num_samples, 4, *shape[3:]))
+        after_reshape = time.time()
+        data = np.transpose(data, (0, 1, 4, 2, 3))
+        after_tranpose = time.time()
+        data = data[:, [0, 1, 3], :, :, :]
+        after_select = time.time()
+        self.data = torch.FloatTensor(data)
+        print('reshape:  %0.3f \t transpose: %0.3f \t select: %0.3f'%(after_reshape-start, after_tranpose-after_reshape, after_select-after_tranpose))
         # self.data = self.data.permute(0, 1, 4, 2, 3)
-        samples = np.random.choice(num_samples, 3)
+        # # Dim 2: 0 ref; 1 pos; 2 ref; 3 neg
+        # # self.data = self.data[:, [0,1,3], :, :, :] # Too time consuming.
+        # # self.data = self.data.permute(0, 1, 4, 2, 3)
         if visualize:
+            samples = np.random.choice(num_samples, 3)
             for i in samples:
                 s = data[i, 0, 0, ...]
                 # s = cv2.cvtColor(s, cv2.COLOR_LAB2RGB) # if patch is in Lab format.
