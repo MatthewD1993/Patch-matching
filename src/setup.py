@@ -7,5 +7,5 @@ extension_mod = Extension("patchselect",
                           libraries=['opencv_core', 'opencv_imgproc', 'opencv_highgui', ],
                           library_dirs=['/usr/local/lib'],
                           sources=["main.cpp"],
-                          extra_compile_args=['-std=c++11 -fopenmp'])
+                          extra_compile_args=['-std=c++11 ']) # -fopenm This seems can't help at all.
 setup(name="patchselect", ext_modules=[extension_mod])

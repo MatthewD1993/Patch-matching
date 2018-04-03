@@ -27,8 +27,62 @@ class Judge(nn.Module):
             nn.Tanh(),
             nn.Conv2d(512, 512, 1),
             nn.Tanh(),
-            nn.Conv2d(512, 128  , 1),
+            nn.Conv2d(512, 128, 1),
             nn.Tanh(),
+        )
+        self.sim = self.sim_dict[cmp]
+        self.two_set_vars = two_set_vars
+        assert init_weight, "Only true option is supported."
+
+        self._initialize_weights()
+        if two_set_vars:
+            self.feature_extractor_s = copy.deepcopy(self.feature_extractor_f)
+
+    def forward(self, sample):
+        # print("Sample shape is:", sample.size())
+        if self.two_set_vars:
+            p0_features = self.feature_extractor_f.forward(sample[:, 0])
+            p1_features = self.feature_extractor_s.forward(sample[:, 1])
+        else:
+            p0_features = self.feature_extractor_f.forward(sample[:, 0])
+            p1_features = self.feature_extractor_f.forward(sample[:, 1])
+        p0_f = p0_features.clone()
+        p1_f = p1_features.clone()
+        # Squeeze the last dimension, [[f0],[f1]...[f511]]
+        pred = self.sim(p0_f.squeeze_(), p1_f.squeeze_())
+        # print("patch feature shape is", p0_features.size())
+        return pred
+
+    def _initialize_weights(self):
+        for m in self.modules():
+            print("Module", m)
+            if isinstance(m, nn.Conv2d):
+                n = m.kernel_size[0] * m.kernel_size[1] * m.out_channels
+                m.weight.data.normal_(0, math.sqrt(2. / n))
+                if m.bias is not None:
+                    m.bias.data.zero_()
+            elif isinstance(m, nn.BatchNorm2d):
+                m.weight.data.fill_(1)
+                m.bias.data.zero_()
+            # elif isinstance(m, nn.Linear):
+            #     m.weight.data.normal_(0, 0.01)
+            #     m.bias.data.zero_()
+
+
+class Judge_small(nn.Module):
+    # Normalize each vector, and calculate cosine similarity, 1 means exact same.
+    sim_dict = {'dist_sim': nn.PairwiseDistance(p=2), 'cos_sim': nn.CosineSimilarity()}
+
+    def __init__(self, image_channels=3, cmp='dist_sim', init_weight=True, two_set_vars=False):
+        super(Judge_small, self).__init__()
+        assert cmp in ['dist_sim', 'cos_sim']
+        self.feature_extractor_f = nn.Sequential(
+            nn.Conv2d(image_channels, 64, 7, stride=2),
+            nn.LeakyReLU(0.1, inplace=True),
+            nn.Conv2d(64, 128, 5, stride=2),
+            nn.LeakyReLU(0.1, inplace=True),
+            nn.Conv2d(128, 256, 5),
+            nn.LeakyReLU(0.1, inplace=True),
         )
         self.sim = self.sim_dict[cmp]
         self.two_set_vars = two_set_vars

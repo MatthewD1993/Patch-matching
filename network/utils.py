@@ -278,3 +278,10 @@ def get_confuse_rate(preds, label=None):
         confuse_status = [preds[2*i] >= preds[2*i+1] for i in range(preds.shape[0]//2)]
     return np.mean(confuse_status)
 
+
+def update_lr(optim, step):
+    if step % 50000==1:
+        for g in optim.param_groups:
+            g['lr'] /= 2.
+            g['lr'] = max(g['lr'], 1e-6)
+    return optim.param_groups[0]['lr']

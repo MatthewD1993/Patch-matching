@@ -1,5 +1,5 @@
-from network.models import Judge
-from network.utils import new_hinge_loss, accuracy, get_confuse_rate
+from network.models import Judge, Judge_small
+from network.utils import new_hinge_loss, accuracy, get_confuse_rate, update_lr
 from network.utils import KITTIPatchesDataset, SintelPatchesDataset
 from network.logger import Logger
 
@@ -12,8 +12,7 @@ import os
 import numpy as np
 import cv2
 
-
-gpus = [0]
+gpus = [2]
 os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
 os.environ['CUDA_VISIBLE_DEVICES'] = ','.join([str(g) for g in gpus])
 
@@ -64,19 +63,21 @@ def save_model(net, optim, epoch, ckpt_fname):
 
 def main():
     # Configuration.
-    log_dir = "./sintel_1_lr_e-3/"
+    log_dir = "/cdengdata/patchmatching/sintel_small_validate_kitti/"
 
-    saved_model = './torch2pytorch/bailer_weight_Sintel.ckpt'
-    resume = False
+    saved_model = '/cdengdata/patchmatching/sintel_f256_small_auto_lr_e-4/check_epoch3700'
+    dataset = 'KITTI'
+    resume = True
     train = True
     two_set_vars = False
-    patchsize = 56
+    patchsize = 31
     max_epochs = 50000
-    start_epoch = 0
-    lr = 0.001
+    start_epoch = 400 if resume else 0
+    lr = 5e-5
     # max_epochs = 60
 
-    judge = Judge(two_set_vars=two_set_vars)
+    # judge = Judge(two_set_vars=two_set_vars)
+    judge = Judge_small(two_set_vars=two_set_vars)
 
     # Use multiple GPUs
     if len(gpus) > 1:
@@ -86,7 +87,7 @@ def main():
     optimizer = optim.Adam(judge.parameters(), lr=lr)
 
     if resume:
-        print('Restore from checkpoint: ', saved_model)
+        print('>>> Restore from checkpoint: ', saved_model)
         ckpt = torch.load(saved_model)
         if train:
             judge.load_state_dict(ckpt['state_dict'])
@@ -98,17 +99,25 @@ def main():
             judge.load_state_dict(ckpt)
 
     if not os.path.exists(log_dir):
-        os.mkdir(log_dir)
+        os.makedirs(log_dir)
     train_logger = Logger(log_dir=log_dir + "train")
     test_logger = Logger(log_dir=log_dir + "test")
 
-    train_images = 833 # 160
-    test_images  = 208
-    train_patch_set = SintelPatchesDataset(patchsize, cntImages=train_images, offset=0)
+    if dataset == 'KITTI':
+        train_images = 160
+        test_images = 40
+        train_patch_set = KITTIPatchesDataset(patchsize, cntImages=train_images, offset=0)
+        print('OK!')
+        test_patch_set = KITTIPatchesDataset(patchsize, cntImages=test_images, offset=train_images)
+    elif dataset == 'Sintel':
+        train_images = 833  # 160
+        test_images = 208
+        train_patch_set = SintelPatchesDataset(patchsize, cntImages=train_images, offset=0)
+        test_patch_set = SintelPatchesDataset(patchsize, cntImages=test_images, offset=train_images)
+
     train_patch_set.newData()
     train_loader = DataLoader(train_patch_set, batch_size=256, num_workers=4, pin_memory=True, drop_last=True)
 
-    test_patch_set = SintelPatchesDataset(patchsize, cntImages=test_images, offset=train_images)
     test_patch_set.newData()
     test_loader = DataLoader(test_patch_set, batch_size=256, num_workers=4, pin_memory=True, drop_last=True)
 
@@ -127,9 +136,10 @@ def main():
             # # print("Input pairs shape(should be [Batch size,2,3,56,56])", pairs.shape)
             # labels = Variable(labels_d.cuda(0, async=True), requires_grad=False)
 
+            lr = update_lr(optimizer, step)
+
             pairs = Variable(pairs_d.cuda(), requires_grad=False)
             labels = Variable(labels_d.cuda(), requires_grad=False)
-
             preds = judge(pairs)
             loss = new_hinge_loss(preds, labels)
 
@@ -143,8 +153,9 @@ def main():
 
                 train_logger.log_scalar("accuracy", train_acc, step)
                 train_logger.log_scalar("confuse_rate", train_confuse_rate, step)
-                train_logger.log_scalar("loss", to_np(loss), step)
+                train_logger.log_scalar("loss", to_np(loss)[0], step)
                 train_logger.log_histogram("preds", to_np(preds), step)
+                train_logger.log_scalar("lr", lr, step)
 
                 print("Step %d \t loss is %f" % (step, to_np(loss)))
                 print("Preds range: ", get_range(preds))
@@ -155,11 +166,11 @@ def main():
                     train_logger.log_histogram(tag+'/grad', to_np(value.grad), step)
 
                 # Randomly select 1 (pos pair, neg pair) to log for visualization.
-                pos_image_pairs = np.random.choice(np.arange(0, train_loader.batch_size, 2), 1, replace=False)
-                for idx in pos_image_pairs:
-                    train_logger.log_images("pos", [to_RGB(pairs_d[idx][0]), to_RGB(pairs_d[idx][1])], step)
-                    # train_logger.log_images("pos_1", to_RGB(pairs_d[idx][1]), step)
-                    train_logger.log_images("neg", [to_RGB(pairs_d[idx+1][0]), to_RGB(pairs_d[idx+1][1])], step)
+                # pos_image_pairs = np.random.choice(np.arange(0, train_loader.batch_size, 2), 1, replace=False)
+                # for idx in pos_image_pairs:
+                #     train_logger.log_images("pos", [to_RGB(pairs_d[idx][0]), to_RGB(pairs_d[idx][1])], step)
+                #     # train_logger.log_images("pos_1", to_RGB(pairs_d[idx][1]), step)
+                #     train_logger.log_images("neg", [to_RGB(pairs_d[idx+1][0]), to_RGB(pairs_d[idx+1][1])], step)
 
                 if step % 100 == 0:
                     for p, l in test_loader:
@@ -177,7 +188,7 @@ def main():
                     test_acc.reset()
                     test_confuse_rate.reset()
 
-        if e % 10 == 0:
+        if e % 100 == 0:
             save_model(judge, optimizer, e, log_dir+"check_epoch"+str(e))
 
 

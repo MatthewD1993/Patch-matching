@@ -146,17 +146,25 @@ public:
         _seq1.setFileSequence ( image2 );
 
         _gt.offset = offset;
-#ifdef KITTI
-        _gt._loadType = _gt.LOAD_TYPE_KITTI;
-#else
-        _gt._loadType = _gt.LOAD_TYPE_MPI;
-#endif
         _gt.setFileSequence ( flow );
 
+        if (image1.find("data_scene_flow") != std::string::npos){
+            _gt._loadType = _gt.LOAD_TYPE_KITTI;
+        }
+        else if (image1.find("MPI-Sintel-complete") != std::string::npos){
+            _gt._loadType = _gt.LOAD_TYPE_MPI;
+        }
+        else {
+            std::cout << "Not acceptable input string!" << std::endl;
+            exit(1);
+        }
+
+
         // Load and preprocess seqs.
-        #pragma omp parallel num_threads(4)
-        {
-        #pragma omp  for
+//        #pragma omp parallel num_threads(8)
+//        {
+//        #pragma omp  for
+
         for ( int i=0; i< _cntImages; i++ )
         {
             _gt ( i );
@@ -196,14 +204,10 @@ public:
                         x ( k,l )[p] *= max;
                         assert ( !isnan ( x ( k,l ) [p] ) );
                         }
-
-
                 }
             }
             cv::copyMakeBorder ( _seq0[i], _seq0[i], _patchsize/2, ( _patchsize-1 )/2, _patchsize/2, ( _patchsize-1 )/2, cv::BORDER_REPLICATE );
             cv::copyMakeBorder ( _seq1[i], _seq1[i], _patchsize/2, ( _patchsize-1 )/2, _patchsize/2, ( _patchsize-1 )/2, cv::BORDER_REPLICATE );
-
-        }
         }
 
     }
@@ -289,51 +293,44 @@ public:
     }
 
     void createPyArrayPtr ( float * ptr ) {
-    	float * pt=ptr;
+//    	float * pt=ptr;
     	samplelist* arr =&_pos;
         cout<< "Number of (pos pair, neg pair): " << arr->size()<<endl;
 
     	int patch_square = _patchsize*_patchsize;
     	int patch_s      = patch_square*channels;
 
-//    	int chan_begin = 0;
-//    	int row_begin  = 0;
-//    	int index      = 0;
-
+        #pragma omp parallel num_threads(8)
+        {
         #pragma omp  for
+
     	for(unsigned int i=0; i<(*arr).size(); i++){
-//            cout << 'Number of samples: ' << i << endl;
+
+            arr = &_pos;
+            float *pt = ptr + patch_s*i*4;
 
     		for(int ss=0; ss<2; ss++){
     			imgtype x = (*arr)[i].second[ss];
     			assert(x.rows == _patchsize);
-
     			if (!x.isContinuous()){ x = x.clone(); }
-//
     			memcpy(pt, (float*)x.data, sizeof(float)*patch_s);
 
-//                #pragma omp parallel for
-//    			for(int c=0; c<3; c++){
-//    			    chan_begin = c*patch_square;
-//    			    for (int j=0; j<x.rows; j++){
-//    			        row_begin =  j*x.cols;
-//                        for (int k=0; k<x.cols; k++){
-//                            index = chan_begin + row_begin + k;
-//                            pt[index] = (float) x(j,k)[c];
-//                        }
-//    			    }
-//    			}
+    			pt += patch_s;
+    		}
+    		arr = &_neg;
+
+            for(int ss=0; ss<2; ss++){
+    			imgtype x = (*arr)[i].second[ss];
+    			assert(x.rows == _patchsize);
+    			if (!x.isContinuous()){ x = x.clone(); }
+    			memcpy(pt, (float*)x.data, sizeof(float)*patch_s);
     			pt += patch_s;
     		}
 
 
-    		if (arr == &_pos){
-    			arr = &_neg;
-    			i--;
-    		}
-    		else arr = &_pos;
     	}
-    	assert(pt == ptr + (patch_s*2*2*arr->size()));
+    	}
+//    	assert(pt == ptr + (patch_s*2*2*arr->size()));
     }
 };
 
