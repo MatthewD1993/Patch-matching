@@ -61,6 +61,17 @@ class SintelPatchesDataset(PatchDataset):
         self.one_fetch = 2 << 14  # 16384
 
 
+class ChairsPatchesDataset(PatchDataset):
+
+    img1 = "/cdengdata/FlyingChairs_release/patch_train/%6_img0.png"
+    img2 = "/cdengdata/FlyingChairs_release/patch_train/%6_img1.png"
+    flow = "/cdengdata/FlyingChairs_release/patch_train/%6_flow.flo"
+
+    def __init__(self, patchsize, cntImages=5000, offset=0, scale=1):
+        super().__init__(patchsize, cntImages=cntImages, offset=offset, scale=scale)
+        self.one_fetch = 2 << 14  # 16384
+
+
 class Compare_Dataset(Dataset):
     one_fetch = 2 << 14
 
@@ -110,8 +121,8 @@ class Compare_Dataset(Dataset):
         return self.data[index]
 
 
-def compare_loss(input_p, input_n):
-    return CompareLoss()(input_p, input_n)
+def compare_loss(input_p, input_n, t=0.1):
+    return CompareLoss.apply(input_p, input_n, t)
 
 
 class CompareLoss(Function):
@@ -122,6 +133,7 @@ class CompareLoss(Function):
         buffer.resize_as_(input_p).copy_(input_p)
         buffer = buffer - input_n + t
         buffer[torch.lt(buffer, 0)] = 0
+        # print(buffer)
 
         output = buffer.sum()
         if self.size_average:

@@ -154,11 +154,14 @@ public:
         else if (image1.find("MPI-Sintel-complete") != std::string::npos){
             _gt._loadType = _gt.LOAD_TYPE_MPI;
         }
+        else if (image1.find("FlyingChairs_release") != std::string::npos){
+            _gt._loadType = _gt.LOAD_TYPE_MPI;
+        }
+
         else {
             std::cout << "Not acceptable input string!" << std::endl;
             exit(1);
         }
-
 
         // Load and preprocess seqs.
 //        #pragma omp parallel num_threads(8)

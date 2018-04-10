@@ -1,6 +1,6 @@
-from network.models import Judge, Judge_small
+from network.models import Judge, Judge_small, DilationJudge
 from network.utils import new_hinge_loss, accuracy, get_confuse_rate, update_lr
-from network.utils import KITTIPatchesDataset, SintelPatchesDataset
+from network.utils import KITTIPatchesDataset, SintelPatchesDataset, ChairsPatchesDataset
 from network.logger import Logger
 
 import torch
@@ -12,12 +12,30 @@ import os
 import numpy as np
 import cv2
 
-gpus = [2]
+gpus = [0]
 os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
 os.environ['CUDA_VISIBLE_DEVICES'] = ','.join([str(g) for g in gpus])
 
 # Set to False if patch format is Lab.
 patch_is_BGR = True
+
+
+class AverageMeter(object):
+    """Computes and stores the average and current value"""
+    def __init__(self):
+        self.reset()
+
+    def reset(self):
+        self.val = 0
+        self.avg = 0
+        self.sum = 0
+        self.count = 0
+
+    def update(self, val, n=1):
+        self.val = val
+        self.sum += val * n
+        self.count += n
+        self.avg = self.sum / self.count
 
 
 def to_np(x):
@@ -63,21 +81,21 @@ def save_model(net, optim, epoch, ckpt_fname):
 
 def main():
     # Configuration.
-    log_dir = "/cdengdata/patchmatching/sintel_small_validate_kitti/"
+    log_dir = "/cdengdata/patchmatching/inception_dilation_chairs/"
 
     saved_model = '/cdengdata/patchmatching/sintel_f256_small_auto_lr_e-4/check_epoch3700'
-    dataset = 'KITTI'
-    resume = True
-    train = False
+    dataset = 'Chairs'
+    resume = False
+    train = True
     two_set_vars = False
-    patchsize = 31
+    patchsize = 33
     max_epochs = 50000
     start_epoch = 400 if resume else 0
-    lr = 0
+    lr = 1e-4
     # max_epochs = 60
 
-    # judge = Judge(two_set_vars=two_set_vars)
-    judge = Judge_small(two_set_vars=two_set_vars)
+    # judge = Judge_small(two_set_vars=two_set_vars)
+    judge = DilationJudge(two_set_vars=two_set_vars)
 
     # Use multiple GPUs
     if len(gpus) > 1:
@@ -113,6 +131,11 @@ def main():
         test_images = 208
         train_patch_set = SintelPatchesDataset(patchsize, cntImages=train_images, offset=0)
         test_patch_set = SintelPatchesDataset(patchsize, cntImages=test_images, offset=train_images)
+    elif dataset == 'Chairs':
+        train_images = 400  # 160
+        test_images = 100
+        train_patch_set = ChairsPatchesDataset(patchsize, cntImages=train_images, offset=0)
+        test_patch_set = ChairsPatchesDataset(patchsize, cntImages=test_images, offset=train_images)
 
     train_patch_set.newData()
     train_loader = DataLoader(train_patch_set, batch_size=256, num_workers=4, pin_memory=True, drop_last=True)
@@ -192,22 +215,7 @@ def main():
             save_model(judge, optimizer, e, log_dir+"check_epoch"+str(e))
 
 
-class AverageMeter(object):
-    """Computes and stores the average and current value"""
-    def __init__(self):
-        self.reset()
 
-    def reset(self):
-        self.val = 0
-        self.avg = 0
-        self.sum = 0
-        self.count = 0
-
-    def update(self, val, n=1):
-        self.val = val
-        self.sum += val * n
-        self.count += n
-        self.avg = self.sum / self.count
 
 if __name__ == '__main__':
     main()
