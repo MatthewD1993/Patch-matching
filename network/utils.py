@@ -22,7 +22,7 @@ class PatchDataset(Dataset):
             num_sample_pairs = self.one_fetch
         data = ps.newData(self.patch_selector, num_sample_pairs)
         shape = data.shape
-        print('data shape is: ', data.shape)
+        # print('data shape is: ', data.shape)
         self.data = torch.FloatTensor(data).view(num_sample_pairs*2, *shape[2:])
         self.data = self.data.permute(0, 1, 4, 2, 3).contiguous()
 
@@ -63,8 +63,8 @@ class SintelPatchesDataset(PatchDataset):
 
 class ChairsPatchesDataset(PatchDataset):
 
-    img1 = "/cdengdata/FlyingChairs_release/patch_train/%6_img0.png"
-    img2 = "/cdengdata/FlyingChairs_release/patch_train/%6_img1.png"
+    img1 = "/cdengdata/FlyingChairs_release/patch_train/%6_img1.ppm"
+    img2 = "/cdengdata/FlyingChairs_release/patch_train/%6_img2.ppm"
     flow = "/cdengdata/FlyingChairs_release/patch_train/%6_flow.flo"
 
     def __init__(self, patchsize, cntImages=5000, offset=0, scale=1):

@@ -1,4 +1,8 @@
-from network.models import Judge, Judge_small, DilationJudge
+"""
+Author: Chengbiao Deng
+ziyoububianmj@gmail.com
+"""
+from network.models import Judge, Judge_small, DilationJudge, DilationJudgeRGB
 from network.utils import new_hinge_loss, accuracy, get_confuse_rate, update_lr
 from network.utils import KITTIPatchesDataset, SintelPatchesDataset, ChairsPatchesDataset
 from network.logger import Logger
@@ -11,10 +15,8 @@ import torch.optim as optim
 import os
 import numpy as np
 import cv2
+from tqdm import tqdm
 
-gpus = [0]
-os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
-os.environ['CUDA_VISIBLE_DEVICES'] = ','.join([str(g) for g in gpus])
 
 # Set to False if patch format is Lab.
 patch_is_BGR = True
@@ -72,7 +74,7 @@ def save_model(net, optim, epoch, ckpt_fname):
     torch.save(
         {
             'epoch': epoch,
-            'state_dict': net.state_dict(),
+            'state_dict': net.module.state_dict(),
             'optimizer': optim.state_dict(),
         },
         ckpt_fname
@@ -81,40 +83,43 @@ def save_model(net, optim, epoch, ckpt_fname):
 
 def main():
     # Configuration.
-    log_dir = "/cdengdata/patchmatching/inception_dilation_chairs/"
+    gpus = [2, 3]
+    os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
+    os.environ['CUDA_VISIBLE_DEVICES'] = ','.join([str(g) for g in gpus])
 
-    saved_model = '/cdengdata/patchmatching/sintel_f256_small_auto_lr_e-4/check_epoch3700'
+    log_dir = "/cdengdata/patchmatching/inception_Chairs/"
+
+    saved_model = '/cdengdata/patchmatching/inception_Chairs/check_epoch100'
     dataset = 'Chairs'
-    resume = False
+    resume = True
     train = True
     two_set_vars = False
     patchsize = 33
     max_epochs = 50000
-    start_epoch = 400 if resume else 0
-    lr = 1e-4
+    start_epoch = 100 if resume else 0
+    lr = 5e-5
     # max_epochs = 60
 
     # judge = Judge_small(two_set_vars=two_set_vars)
     judge = DilationJudge(two_set_vars=two_set_vars)
 
     # Use multiple GPUs
-    if len(gpus) > 1:
-        judge = DataParallel(judge.cuda(gpus[0]), device_ids=gpus)
-    else:
-        judge = judge.cuda()
+    if len(gpus) > 0:
+        judge = DataParallel(judge.cuda(), device_ids=list(range(len(gpus))))
+
     optimizer = optim.Adam(judge.parameters(), lr=lr)
 
     if resume:
         print('>>> Restore from checkpoint: ', saved_model)
         ckpt = torch.load(saved_model)
         if train:
-            judge.load_state_dict(ckpt['state_dict'])
+            judge.module.load_state_dict(ckpt['state_dict'])
             start_epoch = ckpt['epoch']
             optimizer.load_state_dict(ckpt['optimizer'])
             for param_group in optimizer.param_groups:
                 param_group['lr'] = lr
         else:
-            judge.load_state_dict(ckpt['state_dict'] if 'state_dict' in ckpt else ckpt)
+            judge.module.load_state_dict(ckpt['state_dict'] if 'state_dict' in ckpt else ckpt)
 
     if not os.path.exists(log_dir):
         os.makedirs(log_dir)
@@ -128,14 +133,14 @@ def main():
         test_patch_set = KITTIPatchesDataset(patchsize, cntImages=test_images, offset=train_images)
     elif dataset == 'Sintel':
         train_images = 833  # 160
-        test_images = 208
+        test_images  = 208
         train_patch_set = SintelPatchesDataset(patchsize, cntImages=train_images, offset=0)
-        test_patch_set = SintelPatchesDataset(patchsize, cntImages=test_images, offset=train_images)
+        test_patch_set  = SintelPatchesDataset(patchsize, cntImages=test_images, offset=train_images)
     elif dataset == 'Chairs':
-        train_images = 400  # 160
-        test_images = 100
+        train_images = 4000  # 160
+        test_images = 1000
         train_patch_set = ChairsPatchesDataset(patchsize, cntImages=train_images, offset=0)
-        test_patch_set = ChairsPatchesDataset(patchsize, cntImages=test_images, offset=train_images)
+        test_patch_set  = ChairsPatchesDataset(patchsize, cntImages=test_images, offset=train_images)
 
     train_patch_set.newData()
     train_loader = DataLoader(train_patch_set, batch_size=256, num_workers=4, pin_memory=True, drop_last=True)
@@ -149,19 +154,22 @@ def main():
     test_acc = AverageMeter()
     test_confuse_rate = AverageMeter()
 
-    for e in range(start_epoch, max_epochs):
+    for e in tqdm(range(start_epoch, max_epochs), ncols=100):
+
         train_patch_set.newData()
-        for i, (pairs_d, labels_d) in enumerate(train_loader):
-            step = e * len(train_loader) + i
+        epoch_batches = len(train_loader)
+        progress = tqdm(enumerate(train_loader), total=epoch_batches, ncols=100, desc='Training epoch '+str(e))
+        for i, (pairs_d, labels_d) in progress:
+            step = e * epoch_batches + i
 
             # pairs = Variable(pairs_d.cuda(0, async=True), requires_grad=False)
             # # print("Input pairs shape(should be [Batch size,2,3,56,56])", pairs.shape)
             # labels = Variable(labels_d.cuda(0, async=True), requires_grad=False)
 
-            pairs = Variable(pairs_d.cuda(), requires_grad=False)
+            pairs  = Variable(pairs_d.cuda(), requires_grad=False)
             labels = Variable(labels_d.cuda(), requires_grad=False)
             preds = judge(pairs)
-            loss = new_hinge_loss(preds, labels)
+            loss  = new_hinge_loss(preds, labels)
 
             if train:
                 optimizer.zero_grad()
@@ -179,9 +187,8 @@ def main():
                 train_logger.log_scalar("loss", to_np(loss)[0], step)
                 train_logger.log_histogram("preds", to_np(preds), step)
                 train_logger.log_scalar("lr", lr, step)
-
-                print("Step %d \t loss is %f" % (step, to_np(loss)))
-                print("Preds range: ", get_range(preds))
+                progress.set_description("Training epoch " + str(e) + " Preds range: " + str(get_range(preds)))
+                # print("Step %d \t loss is %f" % (step, to_np(loss)))
 
                 for tag, value in judge.named_parameters():
                     tag = tag.replace('.', '/')
@@ -211,10 +218,10 @@ def main():
                     test_acc.reset()
                     test_confuse_rate.reset()
 
-        if e % 100 == 0:
+        progress.close()
+        if e % 10 == 0:
+            print("Saving at epoch {} {}".format(e, log_dir))
             save_model(judge, optimizer, e, log_dir+"check_epoch"+str(e))
-
-
 
 
 if __name__ == '__main__':

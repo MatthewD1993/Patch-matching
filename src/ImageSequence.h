@@ -145,6 +145,7 @@ class ImageSequence : public FileSequence<t>
 
     bool loadFile ( std::string filename, t & obj )
     {
+//        cout << ">>> Loading " << filename << endl;
         if ( _lab &&  t().channels() !=1 )
         {
             assert ( t().channels() == 3 );
@@ -156,7 +157,10 @@ class ImageSequence : public FileSequence<t>
         }
 
         if ( t().channels() ==1 ) obj =  cv::imread ( filename, 0 );
-        else obj = cv::imread ( filename, 1 );
+        else {
+        cv::Mat temp = cv::imread ( filename, 1 );
+        temp.convertTo(obj, CV_32F);
+        }
         if ( obj.depth() == CV_32F ) obj/=255.f;
         return ( !obj.empty() );
     }

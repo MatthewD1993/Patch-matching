@@ -28,7 +28,6 @@ static PyObject* init(PyObject* self, PyObject* args)
 	clock_t start_init = clock();
 	_ps = new patchselect(image1, image2, flow, cntImages, patchsize, scale, offset);
 	cout << "Time to initialize: (s):"<< ((float)(clock() - start_init))/CLOCKS_PER_SEC  << endl;
-	cout << "Initialization success!" <<endl;
 	return PyCapsule_New(_ps, nullptr, Destroyer);
 }
 
@@ -47,28 +46,28 @@ static PyObject* requestNewData(PyObject* self, PyObject* args)
 	
 	v->reset();
 
-	clock_t startTime = clock();
+//	clock_t startTime = clock();
 	v->add(cnt);
-	clock_t time_chunk_over = clock();
-	cout << "Time to create patches chunk (s): " << ((float)(time_chunk_over - startTime))/CLOCKS_PER_SEC <<endl;
+//	clock_t time_chunk_over = clock();
+//	cout << "Time to create patches chunk (s): " << ((float)(time_chunk_over - startTime))/CLOCKS_PER_SEC <<endl;
 
 	// Create a data block. Shape(num_pairs, 2, height, width, num_channels)
 	int nd=6;
 	npy_intp dims[]={cnt, 2, 2, v->_patchsize, v->_patchsize, v->channels};
 
-    cout<<"Simple new!"<<endl;
+//    cout<<"Simple new!"<<endl;
 
 	out_array = PyArray_SimpleNew(nd, dims, NPY_FLOAT32);
 
 	a = (float *)PyArray_DATA(out_array);
-	cout << "Create ptr->......"<<endl;
+//	cout << "Create ptr->......"<<endl;
 
 
-	clock_t time_start_mem = clock();
+//	clock_t time_start_mem = clock();
 	v->createPyArrayPtr(a);
-	cout << "Time to create memory: (s):"<< ((float)(clock()-time_start_mem))/CLOCKS_PER_SEC  << endl;
+//	cout << "Time to create memory: (s):"<< ((float)(clock()-time_start_mem))/CLOCKS_PER_SEC  << endl;
 
-	cout << "Data Loaded!" << endl;
+//	cout << "Data Loaded!" << endl;
 	return out_array;
 }
 

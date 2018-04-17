@@ -162,7 +162,7 @@ public:
             std::cout << "Not acceptable input string!" << std::endl;
             exit(1);
         }
-
+//        cout <<"<<< Works till here!" << endl;
         // Load and preprocess seqs.
 //        #pragma omp parallel num_threads(8)
 //        {
@@ -298,7 +298,7 @@ public:
     void createPyArrayPtr ( float * ptr ) {
 //    	float * pt=ptr;
     	samplelist* arr =&_pos;
-        cout<< "Number of (pos pair, neg pair): " << arr->size()<<endl;
+//        cout<< "Number of (pos pair, neg pair): " << arr->size()<<endl;
 
     	int patch_square = _patchsize*_patchsize;
     	int patch_s      = patch_square*channels;
