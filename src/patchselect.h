@@ -103,6 +103,8 @@ public:
     ImageSequence< imgtype >  _seq0;
     ImageSequence< imgtype >  _seq1;
 //    std::vector < ImageSequence<cv::Mat1b> > _occ;
+    ImageSequence<cv::Mat1b>  _occ;
+
 
     FlowSequence  _gt;
 
@@ -152,6 +154,9 @@ public:
             _gt._loadType = _gt.LOAD_TYPE_KITTI;
         }
         else if (image1.find("MPI-Sintel-complete") != std::string::npos){
+            std::string occ = flow.substr(0, 43)+"occlusions/%6_0.png"; //TODO
+            _occ.offset = offset;
+            _occ.setFileSequence(occ);
             _gt._loadType = _gt.LOAD_TYPE_MPI;
         }
         else if (image1.find("FlyingChairs_release") != std::string::npos){
@@ -245,11 +250,19 @@ public:
             auto pos1 = sml[ randomIVal(sml.size()) ]->get();
             cv::Point2i pos2p = getgtPos2p ( pos1 );
 
+
             if ( addPositive && ( pos2p.x<0 || pos2p.y<0 || pos2p.x >= _gt[pos1.im].cols || pos2p.y >= _gt[pos1.im].rows))
                 // || _occ[pos1.seq][pos1.im](pos1.y, pos1.x)
             {
                 i--;
                 continue;
+            }
+            else{
+                if (_gt._loadType == _gt.LOAD_TYPE_MPI && _occ[pos1.im](pos1.y, pos1.x)){
+                    i--;
+                    continue;
+                // TODO
+                }
             }
             // cout<<pos2p.y<<" "<< _gt[pos1.im].rows<<endl;
             // assert ( pos2p.y < _gt[pos1.im].rows );

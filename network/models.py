@@ -5,6 +5,7 @@ from .utils import compare_loss
 import torch
 import torch.nn.functional as F
 
+
 class Judge(nn.Module):
 
     # Normalize each vector, and calculate cosine similarity, 1 means exact same.

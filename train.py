@@ -83,25 +83,25 @@ def save_model(net, optim, epoch, ckpt_fname):
 
 def main():
     # Configuration.
-    gpus = [2, 3]
+    gpus = [3,4]
     os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
     os.environ['CUDA_VISIBLE_DEVICES'] = ','.join([str(g) for g in gpus])
 
-    log_dir = "/cdengdata/patchmatching/inception_Chairs/"
+    log_dir = "/cdengdata/patchmatching/sintel_f128_lr_5e-5/"
 
-    saved_model = '/cdengdata/patchmatching/inception_Chairs/check_epoch100'
-    dataset = 'Chairs'
+    saved_model = '/cdengdata/patchmatching/sintel_f128_lr_5e-5/check_epoch1200'
+    dataset = 'Sintel'
     resume = True
     train = True
     two_set_vars = False
-    patchsize = 33
+    patchsize = 56
     max_epochs = 50000
-    start_epoch = 100 if resume else 0
-    lr = 5e-5
+    start_epoch = 1201 if resume else 0
+    lr = 2e-5
     # max_epochs = 60
 
     # judge = Judge_small(two_set_vars=two_set_vars)
-    judge = DilationJudge(two_set_vars=two_set_vars)
+    judge = Judge(two_set_vars=two_set_vars)
 
     # Use multiple GPUs
     if len(gpus) > 0:
@@ -146,7 +146,7 @@ def main():
     train_loader = DataLoader(train_patch_set, batch_size=256, num_workers=4, pin_memory=True, drop_last=True)
 
     test_patch_set.newData()
-    test_loader = DataLoader(test_patch_set, batch_size=256, num_workers=4, pin_memory=True, drop_last=True)
+    test_loader = DataLoader(test_patch_set, batch_size=128, num_workers=4, pin_memory=True, drop_last=True)
 
     margin = 1.
     threshold = 0.3
