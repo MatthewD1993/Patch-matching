@@ -83,21 +83,21 @@ def save_model(net, optim, epoch, ckpt_fname):
 
 def main():
     # Configuration.
-    gpus = [3,4]
+    gpus = [1, 2]
     os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
     os.environ['CUDA_VISIBLE_DEVICES'] = ','.join([str(g) for g in gpus])
 
-    log_dir = "/cdengdata/patchmatching/sintel_f128_lr_5e-5/"
+    log_dir = "/cdengdata/patchmatching/kitti_f256_lr_1e-4-5/v/"
 
-    saved_model = '/cdengdata/patchmatching/sintel_f128_lr_5e-5/check_epoch1200'
-    dataset = 'Sintel'
-    resume = True
-    train = True
-    two_set_vars = False
+    saved_model = '/cdengdata/patchmatching/sintel_f128_lr_5e-5/check_epoch1820'
+    dataset = 'KITTI'
+    resume = False
+    train = False
+    two_set_vars = True
     patchsize = 56
-    max_epochs = 50000
-    start_epoch = 1201 if resume else 0
-    lr = 2e-5
+    max_epochs = 10000
+    start_epoch = 1821 if resume else 0
+    lr = 1e-5
     # max_epochs = 60
 
     # judge = Judge_small(two_set_vars=two_set_vars)

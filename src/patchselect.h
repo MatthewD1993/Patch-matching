@@ -192,7 +192,7 @@ public:
 
                     double mean = 0;
 //                    double stdev= 0;
-                    double max = 255;
+                    double max = 1./255;
 
                     for ( int k =0; k<x.rows; k++ )
                         for ( int l =0; l<x.cols; l++ ){
@@ -201,7 +201,6 @@ public:
                             }
 
                     mean/= ( float ) ( x.rows*x.cols );
-                    max /= max;
 //                    // Actually inverse of std variance.
 //                    stdev= 1.f/sqrt ( stdev/ ( float ) ( x.rows*x.cols ) );
 

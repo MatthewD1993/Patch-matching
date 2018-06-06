@@ -51,6 +51,7 @@ def plot(pairs, preds, labels):
         if i & 1 == 0:
             plt.title('prediction '+str(preds[i//2]) + 'label: ' + str(labels[i//2]))
         temp = cv2.cvtColor(pairs[i], cv2.COLOR_LAB2RGB)
+        # temp = pairs[i]
         # m = np.array((56,56,3),np.uint8)
         plt.axis('off')
 
@@ -63,21 +64,24 @@ def plot(pairs, preds, labels):
     plt.waitforbuttonpress(0)
     return
 
-test_patch_set = KITTIPatchesDataset()
+test_patch_set = KITTIPatchesDataset(56)
 test_patch_set.load_data("./data/test_patches.npy")
 print(test_patch_set.data.shape)
-pretrained_weight = torch.load('./log/check_810000')
+pretrained_weight = torch.load('/cdengdata/patchmatching/log_2sets_vars/check_810000')
 pretrained_weight = {k[7:]: v for k,v in pretrained_weight.items()}
-judge = Judge(3, 256, two_set_vars=True)
+judge = Judge(3, two_set_vars=True)
 print(judge)
 # print('###############')
 # print(pretrained_weight)
 judge.load_state_dict(pretrained_weight)
 
-test_loader = DataLoader(test_patch_set, batch_size=2, num_workers=4, pin_memory=True, shuffle=True)
+test_loader = DataLoader(test_patch_set, batch_size=2, num_workers=4, pin_memory=True, shuffle=False)
 fig = plt.figure()
 for i, (pairs_d, labels_d) in enumerate(test_loader):
     print(pairs_d.shape)
+    # rgb_mean = pairs_d.contiguous().view(pairs_d.size()[:3] + (-1,)).mean(dim=-1).view(
+    #     pairs_d.size()[:3] + (1, 1,))
+    # normed_pairs = (pairs_d - rgb_mean) / 255
     pairs_d_v = Variable(pairs_d)
     preds = judge(pairs_d_v)
     # plt.ion()
